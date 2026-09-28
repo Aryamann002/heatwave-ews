@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: heatwave
+      POSTGRES_USER: heatwave
+      POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U heatwave -d heatwave"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://heatwave@postgres:5432/heatwave
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["python", "-m", "pipeline"]
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://heatwave@postgres:5432/heatwave
+    volumes:
+      - ./data:/app/data
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+      pipeline:
+        condition: service_completed_successfully
+    ports:
+      - "5173:5173"
+
+volumes:
+  postgres_data:

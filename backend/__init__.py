@@ -1,0 +1,2 @@
+"""Heatwave EWS backend package."""
+

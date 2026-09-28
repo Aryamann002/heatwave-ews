@@ -1,0 +1,7 @@
+{
+  "districts": [
+    {"id": "ahmedabad", "name": "Ahmedabad", "state": "Gujarat", "latitude": 23.0225, "longitude": 72.5714, "climate_zone": "plains", "boundary_censuscode": 474},
+    {"id": "new-delhi", "name": "New Delhi", "state": "Delhi", "latitude": 28.6139, "longitude": 77.2090, "climate_zone": "plains", "boundary_censuscode": 94},
+    {"id": "chennai", "name": "Chennai", "state": "Tamil Nadu", "latitude": 13.0827, "longitude": 80.2707, "climate_zone": "coastal", "boundary_censuscode": 603}
+  ]
+}

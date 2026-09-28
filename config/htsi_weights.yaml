@@ -1,0 +1,10 @@
+{
+  "version": "1.0.0-assumption",
+  "weights": {
+    "utci": 0.40,
+    "wbgt_est": 0.25,
+    "night": 0.20,
+    "duration": 0.15,
+    "vulnerability": 0.50
+  }
+}

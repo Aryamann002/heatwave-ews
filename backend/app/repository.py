@@ -1,0 +1,90 @@
+"""Small PostGIS repository for dashboard contracts."""
+
+from datetime import UTC, datetime
+from typing import Any
+
+import psycopg
+
+FRESHNESS_HOURS = 12
+
+
+def ensure_operational_tables(database_url: str) -> None:
+    """Create the minimal Phase 1 operational tables idempotently."""
+    statements = (
+        """
+        CREATE TABLE IF NOT EXISTS model_runs (
+            run_id text PRIMARY KEY, source text NOT NULL, init_time timestamptz NOT NULL,
+            retrieved_at timestamptz NOT NULL, checksum text NOT NULL,
+            qc_status text NOT NULL CHECK (qc_status IN ('pass', 'fail')),
+            failure_reason text
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS forecast_daily (
+            district_id text REFERENCES districts(id), forecast_date date NOT NULL,
+            run_id text REFERENCES model_runs(run_id), tmax_c double precision NOT NULL,
+            tmin_c double precision NOT NULL, relative_humidity_pct double precision NOT NULL,
+            wind_speed_m_s double precision NOT NULL,
+            PRIMARY KEY (district_id, forecast_date, run_id)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS thermal_indices (
+            district_id text REFERENCES districts(id), forecast_date date NOT NULL,
+            run_id text REFERENCES model_runs(run_id), utci_c double precision NOT NULL,
+            wbgt_est_c double precision NOT NULL, heat_index_c double precision,
+            PRIMARY KEY (district_id, forecast_date, run_id)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS alerts (
+            district_id text REFERENCES districts(id), forecast_date date NOT NULL,
+            run_id text REFERENCES model_runs(run_id), level text NOT NULL,
+            track1_level text NOT NULL, track2_level text NOT NULL,
+            disagreement boolean NOT NULL, reasoning jsonb NOT NULL,
+            rule_version text NOT NULL, model_versions jsonb NOT NULL,
+            issued_at timestamptz NOT NULL,
+            PRIMARY KEY (district_id, forecast_date, run_id)
+        )
+        """,
+    )
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        for statement in statements:
+            cursor.execute(statement)
+        cursor.execute("ALTER TABLE thermal_indices ALTER COLUMN heat_index_c DROP NOT NULL")
+
+
+def data_status(database_url: str) -> dict[str, Any]:
+    """Return freshness/QC state used to gate alert emission."""
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT run_id, retrieved_at, qc_status, failure_reason FROM model_runs ORDER BY init_time DESC LIMIT 1"
+        )
+        row = cursor.fetchone()
+    if row is None:
+        return {
+            "state": "unavailable",
+            "age_hours": None,
+            "run_id": None,
+            "banner": "No forecast data is available. Alerts are blocked.",
+        }
+    run_id, retrieved_at, qc_status, failure_reason = row
+    age_hours = max(0.0, (datetime.now(UTC) - retrieved_at).total_seconds() / 3600)
+    if qc_status != "pass":
+        state = "qc_failed"
+        banner = f"Forecast quality checks failed: {failure_reason or 'unspecified failure'}. Alerts are blocked."
+    elif age_hours > FRESHNESS_HOURS:
+        state = "stale"
+        banner = f"Forecast data is {age_hours:.1f} hours old. Alerts are blocked."
+    else:
+        state = "current"
+        banner = f"Forecast data is current ({age_hours:.1f} hours old)."
+    return {"state": state, "age_hours": age_hours, "run_id": run_id, "banner": banner}
+
+
+def fetch_rows(database_url: str, query: str, parameters: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
+    """Return query rows as JSON-ready dictionaries."""
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        cursor.execute(query, parameters)
+        columns = [column.name for column in cursor.description or ()]
+        return [dict(zip(columns, row, strict=True)) for row in cursor.fetchall()]

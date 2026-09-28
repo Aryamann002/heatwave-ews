@@ -1,0 +1,17 @@
+{
+  "version": "imd-track1-2026-09-28",
+  "source": "https://mausam.imd.gov.in/pdfs/heatcolduser/morning_heat_bulletin.pdf",
+  "track1": {
+    "minimum_tmax_c": {"plains": 40.0, "coastal": 37.0, "hills": 30.0},
+    "departure_c": {"heat_wave_min": 4.5, "heat_wave_max": 6.4, "severe_min_exclusive": 6.4},
+    "plains_absolute_tmax_c": {"heat_wave": 45.0, "severe_heat_wave": 47.0},
+    "persistence_days": {"yellow_heat_wave": 2, "orange_any_heat": 4, "orange_severe": 2, "red_severe": 3, "red_total_exclusive": 6}
+  },
+  "track2": {
+    "status": "unvalidated_assumption",
+    "utci_c": {"yellow": 26.0, "orange": 32.0, "red": 38.0},
+    "calibrated_probability": {"yellow": 0.50, "orange": 0.75, "red": 0.90},
+    "consecutive_hot_nights": {"yellow": 2, "orange": 3},
+    "wbgt_est_policy": "reasoning_only_until_population_or_workload_specific_thresholds_are_approved"
+  }
+}

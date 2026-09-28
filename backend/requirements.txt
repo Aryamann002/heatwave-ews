@@ -1,0 +1,10 @@
+fastapi==0.141.1
+cdsapi==0.7.7
+ecmwf-opendata==0.3.34
+pythermalcomfort==4.6.0
+psycopg[binary]==3.3.6
+thermofeel==2.3.0
+uvicorn==0.54.0
+xarray==2026.7.0
+zarr==3.4.0
+netCDF4==1.7.4

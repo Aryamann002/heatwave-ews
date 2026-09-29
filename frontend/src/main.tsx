@@ -69,8 +69,23 @@ function App() {
       const instance = new MapLibreMap({
         container: mapNode.current,
         center: [77.2, 21.8],
-        zoom: 3.2,
-        style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": "#edf1ec" } }] },
+        zoom: 3.5,
+        style: {
+          version: 8,
+          sources: {
+            osm: {
+              type: "raster",
+              tiles: ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png", "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png", "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"],
+              tileSize: 256,
+              attribution: "&copy; OpenStreetMap contributors",
+              maxzoom: 19,
+            },
+          },
+          layers: [
+            { id: "background", type: "background", paint: { "background-color": "#edf1ec" } },
+            { id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": 0.9 } },
+          ],
+        },
       });
       map.current = instance;
       instance.addControl(new NavigationControl({ showCompass: false }), "top-right");
@@ -78,7 +93,7 @@ function App() {
         instance.addSource("districts", { type: "geojson", data: mapData });
         instance.addLayer({
           id: "district-fill", type: "fill", source: "districts",
-          paint: { "fill-color": ["match", ["get", "alert_level"], "red", "#c9362b", "orange", "#e97824", "yellow", "#e9b949", "green", "#2f855a", "#737b78"], "fill-opacity": 0.82 },
+          paint: { "fill-color": ["match", ["get", "alert_level"], "red", "#c9362b", "orange", "#e97824", "yellow", "#e9b949", "green", "#2f855a", "#737b78"], "fill-opacity": 0.75 },
         });
         instance.addLayer({ id: "district-outline", type: "line", source: "districts", paint: { "line-color": "#17332a", "line-width": 1.5 } });
         instance.on("click", "district-fill", (event) => {

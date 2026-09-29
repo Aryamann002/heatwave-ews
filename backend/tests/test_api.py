@@ -108,7 +108,7 @@ class ApiContractTest(unittest.TestCase):
         self.assertEqual(vulnerability["metric"], "population_exposure")
 
     def test_vulnerability_is_unavailable_without_approved_rows(self) -> None:
-        response = get_vulnerability("new-delhi")
+        response = get_vulnerability("unknown-district")
         self.assertEqual(response["status"], "unavailable")
         self.assertEqual(response["items"], [])
 

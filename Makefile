@@ -14,4 +14,4 @@ pipeline-run:
 	docker compose run --rm --build backend python -m pipeline
 
 eval-report:
-	docker compose run --rm backend python -m models.evaluate
+	docker compose run --rm --build backend python -m models.report

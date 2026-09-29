@@ -47,6 +47,87 @@ def ensure_operational_tables(database_url: str) -> None:
             PRIMARY KEY (district_id, forecast_date, run_id)
         )
         """,
+        """
+        CREATE TABLE IF NOT EXISTS baseline_predictions (
+            district_id text REFERENCES districts(id), forecast_date date NOT NULL,
+            run_id text REFERENCES model_runs(run_id), baseline text NOT NULL,
+            lead_day integer NOT NULL CHECK (lead_day > 0),
+            level text NOT NULL,
+            PRIMARY KEY (district_id, forecast_date, run_id, baseline)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS vulnerability_wards (
+            ward_id text PRIMARY KEY,
+            district_id text NOT NULL REFERENCES districts(id),
+            name text NOT NULL,
+            population_estimate double precision NOT NULL CHECK (population_estimate >= 0),
+            data_vintage text NOT NULL,
+            source_url text NOT NULL,
+            licence text NOT NULL,
+            geom geometry(MultiPolygon, 4326)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS advisory_drafts (
+            advisory_id text PRIMARY KEY,
+            district_id text NOT NULL REFERENCES districts(id),
+            forecast_date date NOT NULL,
+            run_id text NOT NULL REFERENCES model_runs(run_id),
+            language text NOT NULL CHECK (language IN ('en', 'hi')),
+            alert_level text NOT NULL,
+            text text NOT NULL,
+            template_version text NOT NULL,
+            status text NOT NULL DEFAULT 'pending_approval'
+                CHECK (status IN ('pending_approval', 'approved', 'rejected')),
+            created_at timestamptz NOT NULL,
+            approved_by text,
+            approved_at timestamptz,
+            CHECK (
+                status <> 'approved'
+                OR (approved_by IS NOT NULL AND approved_at IS NOT NULL)
+            ),
+            UNIQUE (district_id, forecast_date, run_id, language)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            user_id text PRIMARY KEY,
+            username text NOT NULL UNIQUE,
+            role text NOT NULL CHECK (role IN ('viewer', 'officer', 'admin')),
+            created_at timestamptz NOT NULL DEFAULT now()
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS audit_log (
+            audit_id text PRIMARY KEY,
+            user_id text NOT NULL REFERENCES users(user_id),
+            action text NOT NULL,
+            entity_type text NOT NULL,
+            entity_id text NOT NULL,
+            old_value jsonb,
+            new_value jsonb,
+            created_at timestamptz NOT NULL DEFAULT now()
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS response_tasks (
+            task_id text PRIMARY KEY,
+            district_id text NOT NULL REFERENCES districts(id),
+            alert_id text,
+            task_type text NOT NULL CHECK (task_type IN ('water_point', 'cooling_centre', 'ambulance_staging', 'other')),
+            title text NOT NULL,
+            description text,
+            status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'cancelled')),
+            priority text NOT NULL DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'critical')),
+            assigned_to text,
+            location_lat double precision,
+            location_lon double precision,
+            created_at timestamptz NOT NULL DEFAULT now(),
+            updated_at timestamptz NOT NULL DEFAULT now(),
+            completed_at timestamptz
+        )
+        """,
     )
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
         for statement in statements:

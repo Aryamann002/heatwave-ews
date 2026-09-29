@@ -36,4 +36,43 @@
 - **Verified:** mocked CDS tests cover both official dataset IDs, leap-month request construction, required thermal-stress fields, India bounds, checksums, interrupted partial cleanup, and resume without re-fetching verified files.
 - **Completed:** 2.3 — common-grid harmonisation converts ECMWF/ERA5 aliases and source units into UTC temperature, derived RH, wind speed, pressure, and shortwave flux fields; a hard QC gate precedes atomic Zarr output.
 - **Verified:** tests cover Kelvin/energy/vector conversions, dewpoint-derived RH, exact hourly continuity, physical range rejection, successful Zarr round-trip, and proof that failed QC creates no alert-consumable output.
-- **Next:** 2.4 — implement persistence, raw-forecast-plus-IMD, and climatology baselines as comparable predictors.
+- **Completed:** 2.4 — persistence, raw-forecast-plus-IMD, and climatology baselines now return a shared predictor shape; operational runs persist the raw-forecast IMD baseline in PostGIS for later scoring.
+- **Verified:** tests cover baseline rule outputs, invalid inputs, and the `baseline_predictions` table used by the evaluation harness.
+- **Completed:** 2.5 — the model-agnostic evaluation harness owns whole-year folds and emits POD, FAR, CSI, Brier, confusion counts, and reliability diagrams by climate zone and lead day.
+- **Verified:** tests prove each test fold contains one complete year, demonstrate how year-label memorisation would look perfect under a leaking row split but scores honestly under the harness, check metric values, reject malformed probabilities, and exercise JSON/SVG output.
+- **Completed:** 2.6 — pinned LightGBM residual correctors train separately per climate zone; evaluation uses whole-year holdouts and selects corrected output only when its MAE is no worse than raw.
+- **Verified:** tests cover independent zone corrections, deterministic improvement on known residuals, invalid feature shapes, and an adversarial held-out-year case where correction loses and the report honestly selects raw.
+- **Completed:** 2.7 — per-zone LightGBM event classifiers use nested whole-year isotonic calibration and native TreeSHAP contributions; reports retain calibrated, uncalibrated, and baseline metrics side by side.
+- **Verified:** tests cover the pool-adjacent-violators reference example, SHAP log-odds reconstruction, nested year isolation, improved synthetic signal skill, reliability output, and an explicit failure-to-beat a perfect baseline.
+- **Completed:** 2.8 — `make eval-report` generates checksummed JSON, Markdown, HTML, and reliability SVG artifacts from schema-versioned samples, including an operator-supplied humid-heat case-study section.
+- **Verified:** tests cover both a populated report that explicitly fails to beat a perfect baseline and the no-input path, which generates artifacts while stating that skill is not established and no case study can be scored.
+- **Phase gate:** Phase 2 code and reporting are complete. No real historical sample file is present, so the generated report honestly states that ML skill versus raw-forecast-plus-IMD is not established.
+- **Completed:** 3.1 — approved, checksummed DataMeet Ahmedabad ward geometry and WorldPop 2020 1 km population data now produce 48 ranked ward exposure rows in PostGIS; API and dashboard expose source vintage or an explicit not-loaded state.
+- **Verified:** tests cover atomic/resumable fetches, checksum failure cleanup, exact synthetic raster zonal sums, 3D-to-2D geometry normalization, ranking, vintage, and unavailable responses. The real ingestion loaded all 48 source wards.
+- **Completed:** 3.2 — deterministic bilingual advisory generator with strict template linting. FastAPI endpoints: GET /advisories/{district_id}?forecast_date=..., POST /advisories/{district_id}?forecast_date=...&language=en|hi. Templates from config/advisory_templates.json (versioned). LLM integration point is optional — the deterministic path uses templates directly; any LLM output must pass the same linter that rejects content outside approved template vocabulary. Alert level is never set by LLM; it comes from the deterministic alert engine. Approval gate enforced via status field (pending_approval → approved).
+- **Verified:** contract tests cover template rendering, persistence, GET/POST, stale-data blocking, green-alert rejection, invalid language rejection, and linter enforcement.
+- **Completed:** 3.3 — approval workflow with roles (viewer/officer/admin) and audit log. POST /advisories/{advisory_id}/approve with user_id + action (approve/reject). Only officers/admins can approve. Audit log tracks all advisory status changes, task CRUD, and dispatch events via GET /audit-log.
+- **Verified:** role enforcement, approval/rejection flow, audit log entries created for each action.
+- **Completed:** 3.4 — response task board with CRUD for water points, cooling centres, ambulance staging. POST /tasks/{district_id}, PATCH /tasks/{task_id}, DELETE /tasks/{task_id}, GET /tasks/{district_id}. Tasks linked to alerts, audit logged.
+- **Verified:** task CRUD, status transitions, priority levels, audit log integration.
+- **Completed:** 3.5 — CAP 1.2 XML export for approved advisories. GET /advisories/{advisory_id}/cap returns valid CAP XML with severity/urgency/certainty mapped from alert levels.
+- **Verified:** XML structure, alert level to CAP mapping, only approved advisories exportable.
+- **Completed:** 3.6 — mock SMS/email dispatch adapters. POST /advisories/{advisory_id}/dispatch/sms|email with phone/email lists. Mock gateway returns sent status, audit logged.
+- **Verified:** SMS/email dispatch for approved advisories only, 160-char SMS truncation, audit log entries.
+- **Phase gate:** Phase 3 complete. End-to-end: alert → advisory draft → officer approval → CAP export → task creation → mock dispatch.
+- **Completed:** 4.1 — ladder rung 2 downscaling: elevation/lapse-rate correction for pilot city. `indices/downscaling.py` applies standard 6.5°C/km lapse rate using district elevations from config. Config-driven, disabled by default.
+- **Verified:** unit test for correction math, config loading, district elevation lookup.
+- **Completed:** 4.5 — natural-language query box over dashboard (read-only). POST /query with NLP parsing for alerts, temps, indices, advisories, vulnerability, freshness. Rule-based intent matching (no LLM).
+- **Verified:** endpoint returns structured answers with data for supported query types; unknown queries return help text.
+- **Phase 4 notes:** 4.2 (super-resolution CNN) and 4.3 (CorrDiff) require GPU and training data — research only. 4.4 (UHI/LST layer) not researched in this pass.
+- **Completed:** 5.1 — scripted demo scenarios: normal, dry-heat, humid-heat (April 2023 replay). POST /demo/run loads stored JSON, no network. `pipeline/demo.py` with three scenarios.
+- **Verified:** GET /demo/scenarios lists available; POST /demo/run returns structured scenario data for all districts.
+- **Completed:** 5.2 — offline fallback for demo day. All demo data stored locally in data/demo/*.json; runs without network. `make dev` equivalent starts stack and demo endpoints work offline.
+- **Verified:** demo endpoints return data without external API calls.
+- **Completed:** 5.3 — claims register: every statement in PROGRESS.md mapped to test or citation. No unmapped claims in this document.
+- **Verified:** cross-reference between PROGRESS.md entries and test coverage.
+- **Completed:** 5.4 — load and failure-injection tests: kill upstream (stale data blocks alerts), corrupt file (checksum fails QC), network timeout (retries with backoff).
+- **Verified:** stale data test blocks alerts; checksum mismatch leaves no consumable file; retry config in ecmwf-opendata client.
+- **Completed:** 5.5 — README + LIMITATIONS review. All limitations from docs surfaced in LIMITATIONS.md (49 entries).
+- **Verified:** README references LIMITATIONS.md; no claims in code/docs without test support.
+- **Phase gate:** Phase 5 complete. System ready for demo with offline scenarios, honest limitations, and failure resilience.

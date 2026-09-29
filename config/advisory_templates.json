@@ -1,0 +1,7 @@
+{
+  "version": "advisory-templates-1",
+  "templates": {
+    "en": "{level} heat alert for {locality}, valid {start_time} to {end_time}. Follow official local instructions. Confirm listed water points and cooling centres before deployment.",
+    "hi": "{locality} के लिए {level} गर्मी चेतावनी, {start_time} से {end_time} तक मान्य। आधिकारिक स्थानीय निर्देशों का पालन करें। तैनाती से पहले सूचीबद्ध जल केंद्रों और शीतलन केंद्रों की पुष्टि करें।"
+  }
+}

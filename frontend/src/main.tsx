@@ -14,6 +14,8 @@ type Feature = GeoJSON.Feature<GeoJSON.MultiPolygon, { name: string; state: stri
 type FeatureCollection = GeoJSON.FeatureCollection<GeoJSON.MultiPolygon, Feature["properties"]>;
 type Forecast = { date: string; tmax_c: number; tmin_c: number; relative_humidity_pct: number; wind_speed_m_s: number };
 type Indices = { date: string; utci_c: number; wbgt_est_c: number; heat_index_c: number | null };
+type VulnerabilityWard = { ward_id: string; name: string; population_estimate: number; data_vintage: string; source_url: string; licence: string; rank: number };
+type Vulnerability = { status: "available" | "unavailable"; metric: "population_exposure"; data_vintage: string | null; items: VulnerabilityWard[] };
 
 function highestAlert(items: Alert[]): Alert | undefined {
   return items.reduce<Alert | undefined>((highest, item) => !highest || rank[item.level] > rank[highest.level] ? item : highest, undefined);
@@ -27,6 +29,7 @@ function App() {
   const [selectedId, setSelectedId] = useState("");
   const [forecast, setForecast] = useState<Forecast[]>([]);
   const [indices, setIndices] = useState<Indices[]>([]);
+  const [vulnerability, setVulnerability] = useState<Vulnerability | null>(null);
   const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
@@ -97,9 +100,11 @@ function App() {
     Promise.all([
       fetch(`${API}/forecast/${selectedId}`).then((response) => response.json()),
       fetch(`${API}/indices/${selectedId}`).then((response) => response.json()),
-    ]).then(([forecastResponse, indexResponse]) => {
+      fetch(`${API}/vulnerability/${selectedId}`).then((response) => response.json()),
+    ]).then(([forecastResponse, indexResponse, vulnerabilityResponse]) => {
       setForecast(forecastResponse.items);
       setIndices(indexResponse.items);
+      setVulnerability(vulnerabilityResponse);
     }).catch((error: Error) => setLoadError(error.message));
   }, [selectedId]);
 
@@ -147,6 +152,12 @@ function App() {
               <div className="tracks"><span>IMD criteria <b>{selectedAlert.track1_level}</b></span><span>Human stress <b>{selectedAlert.track2_level}</b></span>{selectedAlert.disagreement && <em>Tracks disagree · higher level selected</em>}</div>
             </>
           ) : <div className="blocked-card"><h3>No alert record</h3><p>Run the operational pipeline to populate this district.</p></div>}
+          <section className="vulnerability">
+            <div className="section-title"><h3>Population exposure</h3><span>Vintage: {vulnerability?.data_vintage ?? "not loaded"}</span></div>
+            {vulnerability?.status === "available" ? (
+              <ol>{vulnerability.items.slice(0, 5).map((ward) => <li key={ward.ward_id}><b>#{ward.rank} {ward.name}</b><span>{Math.round(ward.population_estimate).toLocaleString("en-IN")} estimated people</span></li>)}</ol>
+            ) : <p>No approved ward-level population dataset is loaded.</p>}
+          </section>
           <footer>Decision-support prototype · Not an official IMD warning · Track 2 thresholds are assumptions</footer>
         </aside>
       </section>

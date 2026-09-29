@@ -16,6 +16,7 @@ from app.districts import seed_districts
 from indices.heat_index import calculate_heat_index
 from indices.utci import calculate_utci
 from indices.wbgt_est import calculate_wbgt_est
+from models.baselines import raw_forecast_imd_baseline
 from pipeline.s1_fetch import HOURLY_FIELDS, fetch_open_meteo, load_districts
 
 
@@ -172,6 +173,10 @@ def run_operational(
                 classify_track1_day(district["climate_zone"], day["tmax_c"], None)
                 for day in days
             ]
+            baseline_predictions = raw_forecast_imd_baseline(
+                district["climate_zone"],
+                ((day["date"], day["tmax_c"], None) for day in days),
+            )
             for index, day in enumerate(days):
                 track1 = evaluate_track1([item.condition for item in conditions[index:]])
                 track2 = evaluate_track2(day["utci_c"], day["wbgt_est_c"], 0, None)
@@ -222,6 +227,22 @@ def run_operational(
                         track1.rule_version,
                         json.dumps({"forecast": "open-meteo", "classifier": "not_available"}),
                         datetime.now(UTC),
+                    ),
+                )
+            for prediction in baseline_predictions:
+                cursor.execute(
+                    """
+                    INSERT INTO baseline_predictions VALUES (%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT (district_id, forecast_date, run_id, baseline) DO UPDATE SET
+                        lead_day=EXCLUDED.lead_day, level=EXCLUDED.level
+                    """,
+                    (
+                        district_id,
+                        prediction.target_date,
+                        manifest["run_id"],
+                        prediction.baseline,
+                        prediction.lead_day,
+                        prediction.level,
                     ),
                 )
     return True

@@ -57,19 +57,5 @@ services:
     ports:
       - "5173:5173"
 
-  scheduler:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    command: ["sh", "-c", "while true; do sleep 21660; python -m pipeline; done"]
-    depends_on:
-      pipeline:
-        condition: service_completed_successfully
-    environment:
-      DATABASE_URL: postgresql://heatwave@postgres:5432/heatwave
-    volumes:
-      - ./data:/app/data
-    restart: unless-stopped
-
 volumes:
   postgres_data:

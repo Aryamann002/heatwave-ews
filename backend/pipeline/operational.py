@@ -19,7 +19,7 @@ from indices.wbgt_est import calculate_wbgt_est
 from models.baselines import raw_forecast_imd_baseline
 from models.train_bias import features as bias_features, load_correctors
 from pipeline.climatology import load_normals
-from pipeline.s1_fetch import HOURLY_FIELDS, fetch_open_meteo, load_districts
+from pipeline.s1_fetch import FORECAST_MODEL, HOURLY_FIELDS, fetch_open_meteo, load_districts
 
 
 def solar_zenith_cosine(timestamp: datetime, latitude: float, longitude: float) -> float:
@@ -274,7 +274,7 @@ def run_operational(
                         track1.level, track2.level, combined.disagreement, json.dumps(reasoning),
                         track1.rule_version,
                         json.dumps({
-                            "forecast": "open-meteo",
+                            "forecast": f"open-meteo:{FORECAST_MODEL}",
                             "tmax_bias_correction": "lightgbm-per-zone" if corrector else "none",
                             "classifier": "not_available",
                         }),

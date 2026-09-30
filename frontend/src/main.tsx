@@ -43,7 +43,8 @@ function App() {
   const [loadError, setLoadError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
-  const [replayId, setReplayId] = useState("");
+  // Landing-page links open a replay directly: /?replay=<scenario id>
+  const [replayId, setReplayId] = useState(() => new URLSearchParams(window.location.search).get("replay") ?? "");
   const [replay, setReplay] = useState<Replay | null>(null);
   const [replayState, setReplayState] = useState("");
 
@@ -99,7 +100,7 @@ function App() {
   return (
     <main>
       <header className="topbar">
-        <div><p className="eyebrow">Extreme heat early warning · human thermal stress</p><h1>Heatwatch India</h1></div>
+        <a className="brand" href="/landing.html"><p className="eyebrow">Extreme heat early warning · human thermal stress</p><h1>Heatwatch India</h1></a>
         <QueryBox />
         <label className="acting">Acting as
           <select value={userId} onChange={(event) => setUserId(event.target.value)}>
@@ -157,11 +158,11 @@ function App() {
               <h4>AI bias correction · held-out skill</h4>
               <p className="hint">{modelCard.model}, trained on {modelCard.samples.toLocaleString("en-IN")} forecast/ERA5 day pairs ({modelCard.period.join(" to ")}), leave-one-year-out.</p>
               <table><thead><tr><th>Zone</th><th>Raw Tmax MAE</th><th>Corrected MAE</th><th>In use</th></tr></thead>
-                <tbody>{modelCard.evaluation.groups.map((group) => <tr key={group.climate_zone}><td>{group.climate_zone}</td><td>{group.raw_mae_c.toFixed(2)} °C</td><td>{group.corrected_mae_c.toFixed(2)} °C</td><td>{group.use_correction ? "yes" : "no (raw kept)"}</td></tr>)}</tbody>
+                <tbody>{modelCard.evaluation.groups.map((group) => <tr key={group.climate_zone}><td>{group.climate_zone}</td><td>{group.raw_mae_c.toFixed(2)} °C</td><td>{group.corrected_mae_c.toFixed(2)} °C</td><td>{group.corrected_mae_c < group.raw_mae_c - 0.05 ? "yes" : "no (raw kept)"}</td></tr>)}</tbody>
               </table>
             </section>
           )}
-          <footer>Decision-support prototype · Not an official IMD warning · Track 1 follows IMD heat-wave criteria against 1991–2020 ERA5 normals; Track 2 (UTCI) thresholds are unvalidated assumptions · Forecast: Open-Meteo</footer>
+          <footer>Decision-support prototype · Not an official IMD warning · Track 1 follows IMD heat-wave criteria against 1991–2020 ERA5 normals; Track 2 (UTCI) thresholds are unvalidated assumptions · Forecast: ECMWF IFS 0.25° via Open-Meteo</footer>
         </aside>
       </section>
     </main>

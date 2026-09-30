@@ -1,4 +1,4 @@
-"""Train and evaluate per-zone Tmax bias correction on real 2022-2025 data.
+"""Train and evaluate per-zone Tmax bias correction on real 2024-2025 data.
 
 Raw forecast: Open-Meteo historical-forecast archive (the model's first forecast day, stitched).
 Target: ERA5 daily Tmax from the Open-Meteo archive, the same frame as the 1991-2020 normals, so
@@ -20,9 +20,11 @@ from urllib.request import urlopen
 import lightgbm as lgb
 
 from models.bias_correction import BiasCorrector, BiasSample, evaluate_bias_correction, fit_bias_correctors
-from pipeline.s1_fetch import load_districts
+from pipeline.s1_fetch import FORECAST_MODEL, load_districts
 
-PERIOD = ("2022-01-01", "2025-12-31")
+# Historical ECMWF IFS 0.25 forecasts exist from early 2024. Without an explicit model the
+# historical-forecast API falls back to ERA5 here, which would make "forecast" equal the target.
+PERIOD = ("2024-01-01", "2025-12-31")
 FEATURES = ("raw_tmax_c", "doy_sin", "doy_cos", "latitude")
 MODEL_DIR = Path("data/models")
 CARD_PATH = MODEL_DIR / "bias_model_card.json"
@@ -44,16 +46,17 @@ def _daily_tmax(kind: str, district: dict[str, Any], cache_dir: Path) -> dict[st
             "latitude": district["latitude"], "longitude": district["longitude"],
             "start_date": PERIOD[0], "end_date": PERIOD[1],
             "daily": "temperature_2m_max", "timezone": "Asia/Kolkata",
+            **({"models": FORECAST_MODEL} if kind == "forecast" else {}),
         })
-        for attempt in range(5):
+        for attempt in range(12):  # multi-year requests count heavily against the hourly limit
             try:
                 with urlopen(f"{SOURCES[kind]}?{query}", timeout=120) as response:
                     body = response.read()
                 break
             except (HTTPError, OSError):
-                if attempt == 4:
+                if attempt == 11:
                     raise
-                time.sleep(30 * (attempt + 1))
+                time.sleep(300)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(body)
     daily = json.loads(path.read_text(encoding="utf-8"))["daily"]
@@ -85,12 +88,19 @@ def load_correctors(card_path: Path = CARD_PATH) -> dict[str, BiasCorrector]:
             lgb.Booster(model_file=str(card_path.parent / f"bias_{group['climate_zone']}.txt")),
         )
         for group in card["evaluation"]["groups"]
-        if group["use_correction"]
+        # a correction must clearly beat the raw forecast on held-out years, not tie it
+        if group["corrected_mae_c"] < group["raw_mae_c"] - 0.05
     }
 
 
 def main() -> None:
     samples = build_samples()
+    identical = sum(abs(s.raw_temperature_c - s.observed_temperature_c) < 1e-9 for s in samples)
+    if identical > 0.5 * len(samples):
+        raise SystemExit(
+            f"{identical}/{len(samples)} forecast values equal the ERA5 target: the forecast source is not an "
+            "independent forecast, so no skill can be measured. Nothing was written."
+        )
     evaluation = evaluate_bias_correction(samples, feature_names=FEATURES)
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     for zone, model in fit_bias_correctors(samples, feature_names=FEATURES).items():
@@ -98,7 +108,7 @@ def main() -> None:
     card = {
         "model": "LightGBM L1 residual regression per climate zone",
         "features": list(FEATURES),
-        "raw": "Open-Meteo historical forecast, first forecast day",
+        "raw": f"ECMWF IFS 0.25 ({FORECAST_MODEL}) historical forecast via Open-Meteo, first forecast day",
         "target": "ERA5 daily Tmax (Open-Meteo archive)",
         "period": list(PERIOD),
         "samples": len(samples),

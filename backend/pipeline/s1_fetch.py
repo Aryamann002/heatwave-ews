@@ -10,6 +10,7 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+FORECAST_MODEL = "ecmwf_ifs025"  # ECMWF IFS 0.25 deg open data
 HOURLY_FIELDS = (
     "temperature_2m",
     "relative_humidity_2m",
@@ -59,6 +60,8 @@ def fetch_open_meteo(
                 "forecast_days": 7,
                 "timezone": "Asia/Kolkata",  # daily aggregation uses the local (IST) day
                 "wind_speed_unit": "ms",
+                # Explicit model, so live data match the history the Tmax corrector is trained on.
+                "models": FORECAST_MODEL,
             }
         )
         with opener(f"{OPEN_METEO_URL}?{query}", timeout=30) as response:

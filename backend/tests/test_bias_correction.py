@@ -51,5 +51,12 @@ class BiasCorrectionTests(unittest.TestCase):
             )
 
 
+    def test_untrained_model_card_means_no_correction(self) -> None:
+        from pathlib import Path as _Path
+
+        from models.train_bias import load_correctors
+
+        self.assertEqual(load_correctors(_Path("does/not/exist/bias_model_card.json")), {})
+
 if __name__ == "__main__":
     unittest.main()

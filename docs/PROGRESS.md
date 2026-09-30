@@ -76,3 +76,15 @@
 - **Completed:** 5.5 — README + LIMITATIONS review. All limitations from docs surfaced in LIMITATIONS.md (49 entries).
 - **Verified:** README references LIMITATIONS.md; no claims in code/docs without test support.
 - **Phase gate:** Phase 5 complete. System ready for demo with offline scenarios, honest limitations, and failure resilience.
+
+## 2026-09-30 — demo-readiness pass
+
+- **Coverage:** 29 heat-prone districts (Census 2011 DataMeet polygons, keyed by state+district census code). Verified: every configured city point lies inside its polygon (`ST_Covers` test).
+- **Climatology:** 1991–2020 ERA5 daily normals (±7-day window) and p90 Tmin per district. Track 1 departure rules and Track 2 hot nights are now live. Verified live: departures computed for all districts.
+- **Alert fixes:** IST local days; Track 1 persistence keeps the hot run a day belongs to (last days of a spell no longer reset to green); Track 2 UTCI mapping moved to the UTCI assessment scale (32/38/46 °C).
+- **Ward exposure:** manifest reuse bug fixed; real wards loaded for Ahmedabad (48), New Delhi/NCT (290), Chennai (201). Two hand-entered "mock data" Chennai rows were deleted from the dev database.
+- **Replay:** fabricated demo JSON removed. Four real heatwaves (May 2024 North India, Apr 2024 east coast, Jun 2019 Bihar, May 2015 AP/Telangana) replay ERA5 hourly data through the live index and alert code; results cached in `data/replay/`. Verified: 28 May 2024 shows 11 red districts, Banda Tmax 48.6 °C (+6.8 °C).
+- **Decision support:** `/overview` (all districts in one call), `/allocation` (ward resource suggestions), task ward/quantity, CAP polygon, advisory IST window and district name, regional-language LLM translation (`/advisories/{id}/regional`, Groq, optional), LLM intent parsing for `/query` with keyword fallback, `top_risk` query.
+- **Dashboard:** rewritten into `api.ts`, `MapView.tsx`, `DistrictPanel.tsx`, `OpsPanel.tsx`: layer switch (alert/UTCI/WBGT/HI/departure), 7-day selector, district ranking, 7-day chart vs normal, ward choropleth, advisories/approval/CAP/dispatch, resource allocation and tasks, audit log, question box, replay mode, polling. Verified with `tsc`, `vite build` and browser screenshots.
+- **ML:** `models/train_bias.py` trains the existing per-zone LightGBM Tmax corrector on 2024–2025 ECMWF IFS forecast/ERA5 pairs with leave-one-year-out evaluation; applied only where held-out MAE improves; results at `/model-card`.
+- **Tests:** 75 unit/integration tests; `make test` now uses a separate `heatwave_test` database so tests no longer overwrite demo data.

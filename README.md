@@ -11,6 +11,8 @@ cp .env.example .env               # optional: add GROQ_API_KEY for regional-lan
 docker compose up --build          # postgres, API :8000, dashboard :5173, pipeline, 6-hourly scheduler
 ```
 
+Landing page: http://localhost:5173/landing.html (links into the dashboard and its replays).
+
 The first pipeline run downloads 30 years of daily temperatures per district (a few minutes, rate-limited) and the ward population data; later runs reuse the cache in `data/`. Open http://localhost:5173.
 
 To precompute the historical replays so the demo works offline:
@@ -25,6 +27,7 @@ docker compose run --rm backend python -m pipeline.replay
 |---|---|---|
 | Ingest | Open-Meteo hourly T, RH, wind, pressure, shortwave + direct radiation, IST days | `backend/pipeline/s1_fetch.py` |
 | Climatology | 1991–2020 ERA5 daily normals (±7-day window), p90 Tmin for hot nights | `backend/pipeline/climatology.py` |
+| Bias correction | LightGBM per climate zone, ECMWF IFS Tmax → ERA5 frame, 2024–2025, leave-one-year-out; used only where held-out MAE improves (`python -m models.train_bias`) | `backend/models/train_bias.py` |
 | Indices | UTCI (pythermalcomfort), WBGT est. (thermofeel Liljegren), Heat Index (Rothfusz) | `backend/indices/` |
 | Track 1 | IMD heat-wave criteria: zone minimum, departure from normal, plains absolute, persistence | `backend/app/alerts.py`, `config/alert_rules.yaml` |
 | Track 2 | Human thermal stress: UTCI assessment scale + consecutive hot nights | same |

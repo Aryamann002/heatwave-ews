@@ -54,7 +54,7 @@ services:
       backend:
         condition: service_healthy
       pipeline:
-        condition: service_completed_successfully
+        condition: service_started
     ports:
       - "5173:5173"
 
@@ -65,9 +65,10 @@ services:
     command: ["sh", "-c", "while true; do sleep 21660; python -m pipeline; done"]
     depends_on:
       pipeline:
-        condition: service_completed_successfully
+        condition: service_started
     environment:
       DATABASE_URL: postgresql://heatwave@postgres:5432/heatwave
+      ALLOW_UNPINNED_POPULATION: ${ALLOW_UNPINNED_POPULATION:-0}
     volumes:
       - ./data:/app/data
     restart: unless-stopped

@@ -27,12 +27,11 @@ def main() -> None:
         )
         print(f"forecast run: FAILED - {reason}", file=sys.stderr, flush=True)
 
-    # Ward exposure was never loaded by anything, so the dashboard panel stayed empty.
+    # Load any district still missing ward exposure, so a partial load retries next run.
     try:
-        if not _scalar(database_url, "SELECT count(*) FROM vulnerability_wards"):
-            from pipeline.vulnerability import main as load_vulnerability
+        from pipeline.vulnerability import main as load_vulnerability
 
-            load_vulnerability()
+        load_vulnerability(missing_only=True)
     except Exception as error:  # non-fatal: forecast alerts must not depend on this
         print(f"vulnerability load skipped: {error}", file=sys.stderr, flush=True)
 

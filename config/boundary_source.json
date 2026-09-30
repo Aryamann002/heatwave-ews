@@ -6,6 +6,6 @@
   "license": "Creative Commons Attribution 2.5 India",
   "attribution": "District boundaries provided by DataMeet Community Maps Project.",
   "derived_file": "config/pilot_districts.geojson",
-  "derived_file_sha256": "be6e4d95dbd465412dd466fc76583a8688963f1fb2f571bcdad87210534b6b38",
-  "transformation": "Selected 29 heat-prone districts by Census 2011 (ST_CEN_CD, DT_CEN_CD) from 2011_Dist.shp and converted to GeoJSON with mapshaper 0.7.69 (-simplify 15% keep-shapes, precision 0.0001). Geometry is made valid with ST_MakeValid on load. District list: config/districts.yaml."
+  "derived_file_sha256": "60b41b907f8842647d3c1ccb797a2f75914c24686ada1776ec769b4a55fb57bc",
+  "transformation": "Selected the districts listed in config/districts.yaml by Census 2011 (ST_CEN_CD, DT_CEN_CD) from 2011_Dist.shp and converted to GeoJSON with mapshaper 0.7.69 (-simplify 12% keep-shapes, precision 0.0001). Geometry is made valid with ST_MakeValid on load. Ladakh districts (Leh, Kargil) are part of Jammu and Kashmir in Census 2011."
 }

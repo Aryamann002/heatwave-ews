@@ -2,11 +2,13 @@
 
 import hashlib
 import json
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
+from urllib.error import HTTPError
 from urllib.request import urlopen
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
@@ -19,6 +21,29 @@ HOURLY_FIELDS = (
     "shortwave_radiation",
     "direct_radiation",
 )
+
+
+def fetch_bytes(
+    url: str,
+    *,
+    timeout: float = 30,
+    attempts: int = 4,
+    wait_s: float = 15,
+    opener: Callable[..., Any] = urlopen,
+) -> bytes:
+    """GET with retries on dropped connections, rate limits (429) and 5xx; other HTTP errors raise."""
+    for attempt in range(attempts):
+        try:
+            with opener(url, timeout=timeout) as response:
+                return response.read()
+        except HTTPError as error:
+            if error.code != 429 and error.code < 500 or attempt == attempts - 1:
+                raise
+        except OSError:  # URLError, TLS EOF, timeouts
+            if attempt == attempts - 1:
+                raise
+        time.sleep(wait_s * (attempt + 1))
+    raise AssertionError("unreachable")
 
 
 def load_districts(path: str | Path = "config/districts.yaml") -> list[dict[str, Any]]:
@@ -64,8 +89,7 @@ def fetch_open_meteo(
                 "models": FORECAST_MODEL,
             }
         )
-        with opener(f"{OPEN_METEO_URL}?{query}", timeout=30) as response:
-            body = response.read()
+        body = fetch_bytes(f"{OPEN_METEO_URL}?{query}", opener=opener)
         document = json.loads(body)
         if document.get("error") or "hourly" not in document:
             raise ValueError(f"Open-Meteo response invalid: {document.get('reason', 'missing hourly data')}")

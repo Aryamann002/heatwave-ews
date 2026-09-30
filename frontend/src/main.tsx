@@ -92,6 +92,15 @@ function App() {
     (rank[levelOf(b)] - rank[levelOf(a)]) || ((rowsForDay[b]?.utci_c ?? 0) - (rowsForDay[a]?.utci_c ?? 0))), [districts, rowsForDay, blocked]);
   useEffect(() => { if (!selectedId && ranked.length && overview) setSelectedId(ranked[0]); }, [ranked, overview]);
 
+  // With many districts, show the top of the ranking plus a name/state search.
+  const [search, setSearch] = useState("");
+  const [showAll, setShowAll] = useState(false);
+  const nameOf = (id: string) => districts?.features.find((item) => String(item.id) === id)?.properties;
+  const matches = search.trim()
+    ? ranked.filter((id) => `${nameOf(id)?.name} ${nameOf(id)?.state}`.toLowerCase().includes(search.trim().toLowerCase()))
+    : ranked;
+  const visible = search.trim() || showAll ? matches : matches.slice(0, 12);
+
   const status = overview?.data_status;
   const counts = ranked.reduce<Record<string, number>>((acc, id) => ({ ...acc, [levelOf(id)]: (acc[levelOf(id)] ?? 0) + 1 }), {});
   const selected = districts?.features.find((feature) => String(feature.id) === selectedId);
@@ -136,9 +145,14 @@ function App() {
         <div className="left">
           {districts && <MapView districts={districts} rows={rowsForDay} layer={layer} selectedId={selectedId} wards={vulnerability?.items ?? []} onSelect={setSelectedId} />}
           <div className="ranking">
-            <div className="section-title"><h3>Districts by risk · {date && shortDate(date)}</h3><span>{ranked.length} monitored</span></div>
+            <div className="section-title"><h3>Districts by risk · {date && shortDate(date)}</h3>
+              <span className="ranking-tools">
+                <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find district or state" aria-label="Find district or state" />
+                {!search.trim() && ranked.length > 12 && <button onClick={() => setShowAll(!showAll)}>{showAll ? "Top 12" : `All ${ranked.length}`}</button>}
+              </span>
+            </div>
             <div className="district-tabs">
-              {ranked.map((id) => {
+              {visible.map((id) => {
                 const feature = districts?.features.find((item) => String(item.id) === id);
                 const row = rowsForDay[id];
                 return <button key={id} className={id === selectedId ? "active" : ""} onClick={() => setSelectedId(id)}>

@@ -2,7 +2,7 @@
 
 Extreme heatwave early warning and human thermal stress index for India (MoES, Disaster Management theme).
 
-**What it does:** fetches a 7-day hourly forecast for 29 heat-prone districts, computes UTCI, estimated WBGT and Heat Index, compares Tmax against 1991–2020 normals, issues IMD-style and human-stress alerts, and gives district officers a GIS dashboard to draft, approve and dispatch advisories and allocate response resources to the most exposed wards.
+**What it does:** fetches a 7-day hourly forecast for 81 districts across 19 states and union territories, computes UTCI, estimated WBGT and Heat Index, compares Tmax against 1991–2020 normals, issues IMD-style and human-stress alerts, and gives district officers a GIS dashboard to draft, approve and dispatch advisories and allocate response resources to the most exposed wards.
 
 ## Quick start
 

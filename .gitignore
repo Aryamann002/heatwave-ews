@@ -8,6 +8,13 @@ frontend/node_modules/
 frontend/dist/
 data/*
 !data/.gitkeep
+# Committed caches: slow or rate-limited to rebuild (ERA5 via Open-Meteo, CC BY 4.0)
+!data/replay/
+!data/models/
+!data/raw/
+data/raw/*
+!data/raw/climatology/
+!data/raw/bias_training/
 
 *.bak
 .claude-flow/

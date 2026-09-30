@@ -49,5 +49,31 @@ class OpenMeteoFetchTest(unittest.TestCase):
             self.assertIn("direct_radiation", calls[0])
 
 
+    def test_fetch_retries_a_dropped_connection_but_not_a_bad_request(self) -> None:
+        from io import BytesIO
+        from urllib.error import HTTPError
+
+        from pipeline.s1_fetch import fetch_bytes
+
+        calls = []
+
+        def flaky(url: str, timeout: float):
+            calls.append(url)
+            if len(calls) == 1:
+                raise OSError("TLS EOF")
+            return BytesIO(b"ok")
+
+        self.assertEqual(fetch_bytes("https://test", wait_s=0, opener=flaky), b"ok")
+        self.assertEqual(len(calls), 2)
+
+        def bad_request(url: str, timeout: float):
+            calls.append(url)
+            raise HTTPError(url, 400, "bad", {}, None)
+
+        calls.clear()
+        with self.assertRaises(HTTPError):
+            fetch_bytes("https://test", wait_s=0, opener=bad_request)
+        self.assertEqual(len(calls), 1)
+
 if __name__ == "__main__":
     unittest.main()

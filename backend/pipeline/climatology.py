@@ -7,11 +7,9 @@ hot nights use the 90th percentile of Tmin over the same window.
 
 import json
 import os
-import time
 from datetime import date
 from pathlib import Path
 from typing import Any, Callable
-from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
@@ -19,7 +17,7 @@ import numpy as np
 import psycopg
 
 from app.repository import ensure_operational_tables
-from pipeline.s1_fetch import load_districts
+from pipeline.s1_fetch import fetch_bytes, load_districts
 
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 PERIOD = ("1991-01-01", "2020-12-31")
@@ -44,15 +42,8 @@ def fetch_daily_history(
             "timezone": "Asia/Kolkata",
         }
     )
-    for attempt in range(5):
-        try:
-            with opener(f"{ARCHIVE_URL}?{query}", timeout=120) as response:
-                body = response.read()
-            break
-        except HTTPError as error:  # 30 years counts as many calls against the rate limit
-            if error.code != 429 or attempt == 4:
-                raise
-            time.sleep(60)
+    # 30 years counts as many calls against the archive rate limit, so back off generously.
+    body = fetch_bytes(f"{ARCHIVE_URL}?{query}", timeout=120, attempts=5, wait_s=60, opener=opener)
     document = json.loads(body)
     if "daily" not in document:
         raise ValueError(f"archive response invalid for {district['id']}: {document.get('reason')}")

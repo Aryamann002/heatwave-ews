@@ -54,7 +54,7 @@ heatwave-ews/
     models/          # bias_correction, classifier, calibration
     tests/
   frontend/
-  data/              # git-ignored
+  data/              # git-ignored, except committed caches: raw/climatology, raw/bias_training, replay, models
   scripts/
   docker-compose.yml
   Makefile

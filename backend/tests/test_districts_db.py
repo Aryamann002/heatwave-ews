@@ -3,6 +3,8 @@
 import os
 import unittest
 
+from pipeline.s1_fetch import load_districts
+
 import psycopg
 
 from app.districts import seed_districts
@@ -21,7 +23,7 @@ class DistrictDatabaseTest(unittest.TestCase):
                 WHERE ST_Covers(geom, ST_SetSRID(ST_MakePoint(longitude, latitude), 4326))
                 """
             )
-            self.assertEqual(cursor.fetchone()[0], 3)
+            self.assertEqual(cursor.fetchone()[0], len(load_districts()))  # every city point lies in its polygon
 
     def test_baseline_predictions_table_accepts_comparable_predictor_rows(self) -> None:
         database_url = os.environ["DATABASE_URL"]

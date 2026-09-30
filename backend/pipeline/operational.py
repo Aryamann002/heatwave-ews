@@ -4,7 +4,7 @@ import math
 import hashlib
 import json
 import os
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +17,8 @@ from indices.heat_index import calculate_heat_index
 from indices.utci import calculate_utci
 from indices.wbgt_est import calculate_wbgt_est
 from models.baselines import raw_forecast_imd_baseline
+from models.train_bias import features as bias_features, load_correctors
+from pipeline.climatology import load_normals
 from pipeline.s1_fetch import HOURLY_FIELDS, fetch_open_meteo, load_districts
 
 
@@ -75,7 +77,9 @@ def harmonise_district_forecast(
         raise ValueError("radiation failed QC")
 
     grouped: dict[date, list[int]] = {}
-    timestamps = [datetime.fromisoformat(value).replace(tzinfo=UTC) for value in hourly["time"]]
+    # Times are local to the requested timezone; Open-Meteo reports its offset.
+    local = timezone(timedelta(seconds=document.get("utc_offset_seconds", 0)))
+    timestamps = [datetime.fromisoformat(value).replace(tzinfo=local) for value in hourly["time"]]
     for index, timestamp in enumerate(timestamps):
         grouped.setdefault(timestamp.date(), []).append(index)
 
@@ -113,6 +117,40 @@ def harmonise_district_forecast(
             }
         )
     return days
+
+
+def consecutive_hot_nights(
+    days: list[dict[str, Any]], normals: list[tuple[float, float, float] | None]
+) -> list[int]:
+    """Running count of consecutive days whose Tmin reaches the 1991-2020 p90 Tmin."""
+    counts, run = [], 0
+    for day, normal in zip(days, normals, strict=True):
+        run = run + 1 if normal is not None and day["tmin_c"] >= normal[2] else 0
+        counts.append(run)
+    return counts
+
+
+def evaluate_days(
+    climate_zone: str, days: list[dict[str, Any]], normals: list[tuple[float, float, float] | None]
+) -> list[tuple[Any, Any, Any, Any]]:
+    """Per day: (Track 1 day condition, Track 1, Track 2, combined) -- shared by live and replay."""
+    conditions = [
+        classify_track1_day(climate_zone, day["tmax_c"], normal[0] if normal else None)
+        for day, normal in zip(days, normals, strict=True)
+    ]
+    hot_nights = consecutive_hot_nights(days, normals)
+    results = []
+    labels = [item.condition for item in conditions]
+    for index, day in enumerate(days):
+        # Persistence looks ahead (early warning), and a hot day also keeps the hot run it
+        # belongs to, so the last days of a spell are not reset to green for lack of look-ahead.
+        start = index
+        while start > 0 and labels[start - 1] != "normal" and labels[index] != "normal":
+            start -= 1
+        track1 = evaluate_track1(labels[start:])
+        track2 = evaluate_track2(day["utci_c"], day["wbgt_est_c"], hot_nights[index], None)
+        results.append((conditions[index], track1, track2, combine_tracks(track1.level, track2.level)))
+    return results
 
 
 def run_operational(
@@ -167,20 +205,29 @@ def run_operational(
             ),
         )
         district_by_id = {district["id"]: district for district in districts}
+        # Trained, held-out-validated Tmax correction into the ERA5 frame of the normals.
+        correctors = load_correctors()
         for district_id, days in daily_by_district.items():
             district = district_by_id[district_id]
-            conditions = [
-                classify_track1_day(district["climate_zone"], day["tmax_c"], None)
-                for day in days
-            ]
+            # 1991-2020 normals; empty until pipeline.climatology has loaded this district.
+            climatology = load_normals(database_url, district_id)
+            normals = [climatology.get(day["date"].timetuple().tm_yday) for day in days]
+            corrector = correctors.get(district["climate_zone"])
+            for day in days:
+                day["raw_tmax_c"] = day["tmax_c"]
+                if corrector is not None:
+                    day["tmax_c"] = corrector.correct(
+                        day["tmax_c"], bias_features(day["tmax_c"], day["date"], district["latitude"])
+                    )
+            evaluations = evaluate_days(district["climate_zone"], days, normals)
             baseline_predictions = raw_forecast_imd_baseline(
                 district["climate_zone"],
-                ((day["date"], day["tmax_c"], None) for day in days),
+                (
+                    (day["date"], day["tmax_c"], normal[0] if normal else None)
+                    for day, normal in zip(days, normals, strict=True)
+                ),
             )
-            for index, day in enumerate(days):
-                track1 = evaluate_track1([item.condition for item in conditions[index:]])
-                track2 = evaluate_track2(day["utci_c"], day["wbgt_est_c"], 0, None)
-                combined = combine_tracks(track1.level, track2.level)
+            for day, (condition, track1, track2, combined) in zip(days, evaluations, strict=True):
                 heat_index = day["heat_index_c"]
                 if isinstance(heat_index, float) and math.isnan(heat_index):
                     heat_index = None
@@ -210,7 +257,8 @@ def run_operational(
                     ),
                 )
                 reasoning = (
-                    conditions[index].reasons + track1.reasons + track2.reasons + combined.reasons
+                    condition.reasons + track1.reasons + track2.reasons + combined.reasons
+                    + ((f"raw_forecast_tmax={day['raw_tmax_c']:.1f}C (bias-corrected to ERA5)",) if corrector else ())
                 )
                 cursor.execute(
                     """
@@ -225,7 +273,11 @@ def run_operational(
                         district_id, day["date"], manifest["run_id"], combined.level,
                         track1.level, track2.level, combined.disagreement, json.dumps(reasoning),
                         track1.rule_version,
-                        json.dumps({"forecast": "open-meteo", "classifier": "not_available"}),
+                        json.dumps({
+                            "forecast": "open-meteo",
+                            "tmax_bias_correction": "lightgbm-per-zone" if corrector else "none",
+                            "classifier": "not_available",
+                        }),
                         datetime.now(UTC),
                     ),
                 )

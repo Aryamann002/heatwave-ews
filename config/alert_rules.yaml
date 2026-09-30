@@ -9,7 +9,8 @@
   },
   "track2": {
     "status": "unvalidated_assumption",
-    "utci_c": {"yellow": 26.0, "orange": 32.0, "red": 38.0},
+    "utci_c_basis": "UTCI assessment scale (Blazejczyk et al. 2013): 32 strong, 38 very strong, 46 extreme heat stress",
+    "utci_c": {"yellow": 32.0, "orange": 38.0, "red": 46.0},
     "calibrated_probability": {"yellow": 0.50, "orange": 0.75, "red": 0.90},
     "consecutive_hot_nights": {"yellow": 2, "orange": 3},
     "wbgt_est_policy": "reasoning_only_until_population_or_workload_specific_thresholds_are_approved"

@@ -10,3 +10,4 @@ data/*
 !data/.gitkeep
 
 *.bak
+.claude-flow/

@@ -14,11 +14,12 @@ def seed_districts(
     """Idempotently load configured WGS84 district polygons and climate zones."""
     districts = json.loads(Path(district_path).read_text(encoding="utf-8"))["districts"]
     features = json.loads(Path(geometry_path).read_text(encoding="utf-8"))["features"]
+    # Census 2011 codes: (state ST_CEN_CD, district DT_CEN_CD), as in the DataMeet source.
     geometry_by_code = {
-        int(feature["properties"]["censuscode"]): feature["geometry"]
+        (int(feature["properties"]["ST_CEN_CD"]), int(feature["properties"]["DT_CEN_CD"])): feature["geometry"]
         for feature in features
     }
-    if any(district["boundary_censuscode"] not in geometry_by_code for district in districts):
+    if any(tuple(district["census_code"]) not in geometry_by_code for district in districts):
         raise ValueError("a configured district has no matching boundary geometry")
 
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
@@ -38,14 +39,14 @@ def seed_districts(
             """
         )
         for district in districts:
-            geometry = geometry_by_code[district["boundary_censuscode"]]
+            geometry = geometry_by_code[tuple(district["census_code"])]
             cursor.execute(
                 """
                 INSERT INTO districts
                     (id, name, state, climate_zone, latitude, longitude,
                      boundary_vintage, geom)
                 VALUES (%s, %s, %s, %s, %s, %s, 'Census 2011',
-                        ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326)))
+                        ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326)), 3)))
                 ON CONFLICT (id) DO UPDATE SET
                     name = EXCLUDED.name,
                     state = EXCLUDED.state,

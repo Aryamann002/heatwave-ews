@@ -1,7 +1,33 @@
 {
   "districts": [
-    {"id": "ahmedabad", "name": "Ahmedabad", "state": "Gujarat", "latitude": 23.0225, "longitude": 72.5714, "climate_zone": "plains", "boundary_censuscode": 474},
-    {"id": "new-delhi", "name": "New Delhi", "state": "Delhi", "latitude": 28.6139, "longitude": 77.2090, "climate_zone": "plains", "boundary_censuscode": 94},
-    {"id": "chennai", "name": "Chennai", "state": "Tamil Nadu", "latitude": 13.0827, "longitude": 80.2707, "climate_zone": "coastal", "boundary_censuscode": 603}
+    {"id": "ahmedabad", "name": "Ahmedabad", "state": "Gujarat", "latitude": 23.0225, "longitude": 72.5714, "climate_zone": "plains", "census_code": [24, 7]},
+    {"id": "new-delhi", "name": "New Delhi", "state": "Delhi", "latitude": 28.6139, "longitude": 77.209, "climate_zone": "plains", "census_code": [7, 5]},
+    {"id": "chennai", "name": "Chennai", "state": "Tamil Nadu", "latitude": 13.0827, "longitude": 80.2707, "climate_zone": "coastal", "census_code": [33, 2]},
+    {"id": "jaipur", "name": "Jaipur", "state": "Rajasthan", "latitude": 26.9124, "longitude": 75.7873, "climate_zone": "plains", "census_code": [8, 12]},
+    {"id": "jodhpur", "name": "Jodhpur", "state": "Rajasthan", "latitude": 26.2389, "longitude": 73.0243, "climate_zone": "plains", "census_code": [8, 15]},
+    {"id": "barmer", "name": "Barmer", "state": "Rajasthan", "latitude": 25.7532, "longitude": 71.4181, "climate_zone": "plains", "census_code": [8, 17]},
+    {"id": "bikaner", "name": "Bikaner", "state": "Rajasthan", "latitude": 28.0229, "longitude": 73.3119, "climate_zone": "plains", "census_code": [8, 3]},
+    {"id": "churu", "name": "Churu", "state": "Rajasthan", "latitude": 28.292, "longitude": 74.966, "climate_zone": "plains", "census_code": [8, 4]},
+    {"id": "lucknow", "name": "Lucknow", "state": "Uttar Pradesh", "latitude": 26.8467, "longitude": 80.9462, "climate_zone": "plains", "census_code": [9, 26]},
+    {"id": "prayagraj", "name": "Prayagraj", "state": "Uttar Pradesh", "latitude": 25.4358, "longitude": 81.8463, "climate_zone": "plains", "census_code": [9, 44]},
+    {"id": "jhansi", "name": "Jhansi", "state": "Uttar Pradesh", "latitude": 25.4484, "longitude": 78.5685, "climate_zone": "plains", "census_code": [9, 35]},
+    {"id": "banda", "name": "Banda", "state": "Uttar Pradesh", "latitude": 25.48, "longitude": 80.335, "climate_zone": "plains", "census_code": [9, 39]},
+    {"id": "varanasi", "name": "Varanasi", "state": "Uttar Pradesh", "latitude": 25.3176, "longitude": 82.9739, "climate_zone": "plains", "census_code": [9, 66]},
+    {"id": "patna", "name": "Patna", "state": "Bihar", "latitude": 25.5941, "longitude": 85.1376, "climate_zone": "plains", "census_code": [10, 28]},
+    {"id": "gaya", "name": "Gaya", "state": "Bihar", "latitude": 24.7914, "longitude": 85.0002, "climate_zone": "plains", "census_code": [10, 34]},
+    {"id": "nagpur", "name": "Nagpur", "state": "Maharashtra", "latitude": 21.1458, "longitude": 79.0882, "climate_zone": "plains", "census_code": [27, 9]},
+    {"id": "chandrapur", "name": "Chandrapur", "state": "Maharashtra", "latitude": 19.9615, "longitude": 79.2961, "climate_zone": "plains", "census_code": [27, 13]},
+    {"id": "bhopal", "name": "Bhopal", "state": "Madhya Pradesh", "latitude": 23.2599, "longitude": 77.4126, "climate_zone": "plains", "census_code": [23, 27]},
+    {"id": "gwalior", "name": "Gwalior", "state": "Madhya Pradesh", "latitude": 26.2183, "longitude": 78.1828, "climate_zone": "plains", "census_code": [23, 4]},
+    {"id": "hyderabad", "name": "Hyderabad", "state": "Telangana", "latitude": 17.385, "longitude": 78.4867, "climate_zone": "plains", "census_code": [28, 5]},
+    {"id": "vijayawada", "name": "Vijayawada (Krishna)", "state": "Andhra Pradesh", "latitude": 16.5062, "longitude": 80.648, "climate_zone": "plains", "census_code": [28, 16]},
+    {"id": "nellore", "name": "Nellore", "state": "Andhra Pradesh", "latitude": 14.4426, "longitude": 79.9865, "climate_zone": "coastal", "census_code": [28, 19]},
+    {"id": "anantapur", "name": "Anantapur", "state": "Andhra Pradesh", "latitude": 14.6819, "longitude": 77.6006, "climate_zone": "plains", "census_code": [28, 22]},
+    {"id": "visakhapatnam", "name": "Visakhapatnam", "state": "Andhra Pradesh", "latitude": 17.6868, "longitude": 83.2185, "climate_zone": "coastal", "census_code": [28, 13]},
+    {"id": "bhubaneswar", "name": "Bhubaneswar (Khordha)", "state": "Odisha", "latitude": 20.2961, "longitude": 85.8245, "climate_zone": "plains", "census_code": [21, 17]},
+    {"id": "titlagarh", "name": "Titlagarh (Balangir)", "state": "Odisha", "latitude": 20.29, "longitude": 83.15, "climate_zone": "plains", "census_code": [21, 24]},
+    {"id": "kolkata", "name": "Kolkata", "state": "West Bengal", "latitude": 22.5726, "longitude": 88.3639, "climate_zone": "plains", "census_code": [19, 16]},
+    {"id": "surat", "name": "Surat", "state": "Gujarat", "latitude": 21.1702, "longitude": 72.8311, "climate_zone": "coastal", "census_code": [24, 25]},
+    {"id": "shimla", "name": "Shimla", "state": "Himachal Pradesh", "latitude": 31.1048, "longitude": 77.1734, "climate_zone": "hills", "census_code": [2, 11]}
   ]
 }

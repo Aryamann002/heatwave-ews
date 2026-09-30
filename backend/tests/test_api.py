@@ -3,6 +3,8 @@
 import json
 import os
 import unittest
+
+from pipeline.s1_fetch import load_districts
 from datetime import UTC, date, datetime, timedelta
 
 import psycopg
@@ -95,7 +97,7 @@ class ApiContractTest(unittest.TestCase):
         )
 
     def test_endpoints_return_seeded_data_and_geometry(self) -> None:
-        self.assertEqual(len(get_districts()["features"]), 3)
+        self.assertEqual(len(get_districts()["features"]), len(load_districts()))
         self.assertEqual(get_forecast("ahmedabad")["items"][0]["tmax_c"], 42.0)
         self.assertEqual(get_indices("ahmedabad")["items"][0]["utci_c"], 39.0)
         alerts = get_alerts("ahmedabad")

@@ -1,5 +1,6 @@
 """Heatwave EWS HTTP API."""
 
+import json
 import os
 import uuid
 from contextlib import asynccontextmanager
@@ -12,7 +13,7 @@ import psycopg
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.advisories import AdvisoryDraft, draft_advisory, lint_advisory
+from app.advisories import IST, AdvisoryDraft, draft_advisory, lint_advisory
 from app.districts import seed_districts
 from app.nl_query import QueryResult, process_nl_query
 from app.repository import data_status, ensure_operational_tables, fetch_rows
@@ -66,6 +67,17 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/model-card")
+def model_card() -> dict[str, Any]:
+    """Held-out evaluation of the Tmax bias correction, or not_trained."""
+    from models.train_bias import CARD_PATH
+
+    if not CARD_PATH.exists():
+        return {"status": "not_trained"}
+    card = json.loads(CARD_PATH.read_text(encoding="utf-8"))
+    return {"status": "trained", **card, "evaluation": {**card["evaluation"], "folds": None}}
+
+
 @app.get("/districts")
 def get_districts() -> dict[str, Any]:
     """Return pilot districts as WGS84 GeoJSON."""
@@ -97,11 +109,15 @@ def get_forecast(district_id: str) -> dict[str, Any]:
     rows = fetch_rows(
         _database_url(),
         """
-        SELECT forecast_date AS date, tmax_c, tmin_c, relative_humidity_pct,
-               wind_speed_m_s, run_id
-        FROM forecast_daily WHERE district_id = %s
-          AND run_id = (SELECT run_id FROM model_runs ORDER BY init_time DESC LIMIT 1)
-        ORDER BY forecast_date
+        SELECT f.forecast_date AS date, f.tmax_c, f.tmin_c, f.relative_humidity_pct,
+               f.wind_speed_m_s, f.run_id, c.normal_tmax_c, c.p90_tmin_c,
+               f.tmax_c - c.normal_tmax_c AS departure_c
+        FROM forecast_daily f
+        LEFT JOIN climatology_daily c ON c.district_id = f.district_id
+          AND c.day_of_year = EXTRACT(DOY FROM f.forecast_date)::integer
+        WHERE f.district_id = %s
+          AND f.run_id = (SELECT run_id FROM model_runs ORDER BY init_time DESC LIMIT 1)
+        ORDER BY f.forecast_date
         """,
         (district_id,),
     )
@@ -122,6 +138,31 @@ def get_indices(district_id: str) -> dict[str, Any]:
         (district_id,),
     )
     return {"district_id": district_id, "data_status": data_status(_database_url()), "items": rows}
+
+
+@app.get("/overview")
+def get_overview() -> dict[str, Any]:
+    """Every district's daily level and indices for the latest run, in one call for the map."""
+    status = data_status(_database_url())
+    rows = fetch_rows(
+        _database_url(),
+        """
+        SELECT a.district_id, a.forecast_date AS date, a.level, a.track1_level, a.track2_level,
+               f.tmax_c, f.tmax_c - c.normal_tmax_c AS departure_c,
+               t.utci_c, t.wbgt_est_c, t.heat_index_c
+        FROM alerts a
+        JOIN forecast_daily f USING (district_id, forecast_date, run_id)
+        JOIN thermal_indices t USING (district_id, forecast_date, run_id)
+        LEFT JOIN climatology_daily c ON c.district_id = a.district_id
+          AND c.day_of_year = EXTRACT(DOY FROM a.forecast_date)::integer
+        WHERE a.run_id = (SELECT run_id FROM model_runs ORDER BY init_time DESC LIMIT 1)
+        ORDER BY a.district_id, a.forecast_date
+        """,
+    )
+    if status["state"] != "current":  # same gate as /alerts: never show stale levels
+        for row in rows:
+            row["level"] = row["track1_level"] = row["track2_level"] = None
+    return {"data_status": status, "emission_blocked": status["state"] != "current", "items": rows}
 
 
 @app.get("/alerts/{district_id}")
@@ -156,6 +197,7 @@ def get_vulnerability(district_id: str) -> dict[str, Any]:
         _database_url(),
         """
         SELECT ward_id, name, population_estimate, data_vintage, source_url, licence,
+               ST_AsGeoJSON(geom, 5)::json AS geometry,
                ROW_NUMBER() OVER (
                    ORDER BY population_estimate DESC, name, ward_id
                )::integer AS rank
@@ -232,11 +274,13 @@ def create_advisory(
     if alert_level == "green":
         raise HTTPException(status_code=400, detail="no advisory needed for green alert")
 
-    # Build start/end times from the forecast date (06:00–12:00 local)
-    start = datetime.combine(date, datetime.min.time().replace(hour=6), tzinfo=UTC)
-    end = datetime.combine(date, datetime.min.time().replace(hour=12), tzinfo=UTC)
+    # Advisory window covers the peak-heat hours of the forecast day, in IST.
+    start = datetime.combine(date, datetime.min.time().replace(hour=10), tzinfo=IST)
+    end = datetime.combine(date, datetime.min.time().replace(hour=18), tzinfo=IST)
+    names = fetch_rows(_database_url(), "SELECT name FROM districts WHERE id = %s", (district_id,))
+    locality = names[0]["name"] if names else district_id
 
-    draft = draft_advisory(alert_level, district_id, start, end, language)
+    draft = draft_advisory(alert_level, locality, start, end, language)
 
     # Lint to ensure template compliance
     lint_advisory(draft)
@@ -256,7 +300,10 @@ def create_advisory(
                 text = EXCLUDED.text,
                 template_version = EXCLUDED.template_version,
                 status = EXCLUDED.status,
+                approved_by = NULL,
+                approved_at = NULL,
                 created_at = EXCLUDED.created_at
+            RETURNING advisory_id
             """,
             (
                 advisory_id,
@@ -271,6 +318,7 @@ def create_advisory(
                 datetime.now(UTC),
             ),
         )
+        advisory_id = cursor.fetchone()[0]  # the existing id when a draft is regenerated
 
     return {
         "advisory_id": advisory_id,
@@ -282,6 +330,73 @@ def create_advisory(
         "template_version": draft.template_version,
         "status": draft.status,
     }
+
+
+# Official language(s) used for regional advisories, by state.
+STATE_LANGUAGE = {
+    "Gujarat": "gu", "Tamil Nadu": "ta", "Telangana": "te", "Andhra Pradesh": "te",
+    "Maharashtra": "mr", "West Bengal": "bn", "Odisha": "or",
+}
+LANGUAGE_NAME = {"gu": "Gujarati", "ta": "Tamil", "te": "Telugu", "mr": "Marathi", "bn": "Bengali", "or": "Odia"}
+
+
+@app.post("/advisories/{district_id}/regional")
+def create_regional_advisory(district_id: str, forecast_date: str) -> dict[str, Any]:
+    """Translate the approved-template English draft into the state's language via the LLM.
+
+    The alert level and English text come from the deterministic path; the LLM only
+    translates. The result is a separate draft that still needs officer approval.
+    """
+    from app.llm import MODEL, chat
+
+    districts = fetch_rows(_database_url(), "SELECT name, state FROM districts WHERE id = %s", (district_id,))
+    if not districts:
+        raise HTTPException(status_code=404, detail="unknown district")
+    language = STATE_LANGUAGE.get(districts[0]["state"])
+    if language is None:
+        raise HTTPException(status_code=400, detail="Hindi is the regional language here; use the Hindi template")
+    existing = fetch_rows(
+        _database_url(),
+        """
+        SELECT text, alert_level FROM advisory_drafts
+        WHERE district_id = %s AND forecast_date = %s AND language = 'en'
+          AND run_id = (SELECT run_id FROM model_runs ORDER BY init_time DESC LIMIT 1)
+        """,
+        (district_id, forecast_date),
+    )
+    english = existing[0] if existing else create_advisory(district_id, forecast_date, "en")
+    translated = chat(
+        f"You translate official heat-wave advisories into {LANGUAGE_NAME[language]}. Translate faithfully. "
+        "Keep every number, date, time, place name and the alert colour word's meaning. Add nothing. "
+        "Reply with the translation only.",
+        english["text"],
+    )
+    if not translated:
+        raise HTTPException(status_code=503, detail="LLM translation unavailable (set GROQ_API_KEY); English and Hindi templates still work")
+    status = data_status(_database_url())
+    advisory_id = str(uuid.uuid4())
+    version = f"llm-translation:{MODEL}:from-en"
+    with psycopg.connect(_database_url()) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO advisory_drafts
+                (advisory_id, district_id, forecast_date, run_id, language,
+                 alert_level, text, template_version, status, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'pending_approval', %s)
+            ON CONFLICT (district_id, forecast_date, run_id, language)
+            DO UPDATE SET text = EXCLUDED.text, template_version = EXCLUDED.template_version,
+                status = 'pending_approval', approved_by = NULL, approved_at = NULL,
+                created_at = EXCLUDED.created_at
+            """,
+            (advisory_id, district_id, forecast_date, status["run_id"], language,
+             english["alert_level"], translated, version, datetime.now(UTC)),
+        )
+        cursor.execute(
+            "SELECT advisory_id FROM advisory_drafts WHERE district_id = %s AND forecast_date = %s AND run_id = %s AND language = %s",
+            (district_id, forecast_date, status["run_id"], language),
+        )
+        advisory_id = cursor.fetchone()[0]
+    return {"advisory_id": advisory_id, "language": language, "text": translated, "template_version": version, "status": "pending_approval"}
 
 
 @app.get("/users")
@@ -390,7 +505,7 @@ def get_tasks(district_id: str, status_filter: str | None = None) -> dict[str, A
     query = """
         SELECT task_id, district_id, alert_id, task_type, title, description,
                status, priority, assigned_to, location_lat, location_lon,
-               created_at, updated_at, completed_at
+               ward_id, quantity, created_at, updated_at, completed_at
         FROM response_tasks WHERE district_id = %s
     """
     params: list[Any] = [district_id]
@@ -413,8 +528,11 @@ def create_task(
     location_lat: float | None = None,
     location_lon: float | None = None,
     alert_id: str | None = None,
+    ward_id: str | None = None,
+    quantity: int | None = None,
+    user_id: str = "user-system-1",
 ) -> dict[str, Any]:
-    """Create a new response task."""
+    """Create a new response task, optionally allocating a resource quantity to a ward."""
     if task_type not in {"water_point", "cooling_centre", "ambulance_staging", "other"}:
         raise HTTPException(status_code=400, detail="invalid task_type")
     if priority not in {"low", "normal", "high", "critical"}:
@@ -428,8 +546,8 @@ def create_task(
             INSERT INTO response_tasks
                 (task_id, district_id, alert_id, task_type, title, description,
                  status, priority, assigned_to, location_lat, location_lon,
-                 created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 created_at, updated_at, ward_id, quantity)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 task_id,
@@ -445,6 +563,8 @@ def create_task(
                 location_lon,
                 now,
                 now,
+                ward_id,
+                quantity,
             ),
         )
 
@@ -457,7 +577,7 @@ def create_task(
             """,
             (
                 audit_id,
-                "user-system-1",
+                user_id,
                 "task_create",
                 "response_task",
                 task_id,
@@ -482,6 +602,7 @@ def update_task(
     priority: str | None = None,
     assigned_to: str | None = None,
     description: str | None = None,
+    user_id: str = "user-system-1",
 ) -> dict[str, Any]:
     """Update a response task."""
     if status and status not in {"pending", "in_progress", "completed", "cancelled"}:
@@ -544,7 +665,7 @@ def update_task(
             """,
             (
                 audit_id,
-                "user-system-1",
+                user_id,
                 "task_update",
                 "response_task",
                 task_id,
@@ -577,6 +698,58 @@ def delete_task(task_id: str) -> dict[str, Any]:
         )
 
     return {"task_id": task_id, "deleted": True}
+
+
+# Planning ratios (people served per unit) used only to *suggest* an allocation; the officer
+# edits quantities before creating tasks. ponytail: flat ratios, replace with state SOPs.
+RESOURCE_RATIOS = {"water_point": 25_000, "cooling_centre": 50_000, "ambulance_staging": 100_000}
+LEVEL_WEIGHT = {"yellow": 0.5, "orange": 1.0, "red": 1.5}
+
+
+@app.get("/allocation/{district_id}")
+def suggest_allocation(district_id: str, forecast_date: str, top: int = 8) -> dict[str, Any]:
+    """Suggest resources for the most-exposed wards, scaled by the day's alert level."""
+    status = data_status(_database_url())
+    if status["state"] != "current":
+        raise HTTPException(status_code=409, detail=status["banner"])
+    alert = fetch_rows(
+        _database_url(),
+        """
+        SELECT level FROM alerts WHERE district_id = %s AND forecast_date = %s
+          AND run_id = (SELECT run_id FROM model_runs ORDER BY init_time DESC LIMIT 1)
+        """,
+        (district_id, forecast_date),
+    )
+    level = alert[0]["level"] if alert else "green"
+    weight = LEVEL_WEIGHT.get(level, 0.0)
+    wards = fetch_rows(
+        _database_url(),
+        """
+        SELECT ward_id, name, population_estimate,
+               ST_Y(ST_PointOnSurface(geom)) AS lat, ST_X(ST_PointOnSurface(geom)) AS lon
+        FROM vulnerability_wards WHERE district_id = %s
+        ORDER BY population_estimate DESC LIMIT %s
+        """,
+        (district_id, top),
+    )
+    items = [
+        {
+            **ward,
+            "resources": {
+                kind: max(1, round(ward["population_estimate"] * weight / people))
+                for kind, people in RESOURCE_RATIOS.items()
+            } if weight else {},
+        }
+        for ward in wards
+    ]
+    return {
+        "district_id": district_id,
+        "forecast_date": forecast_date,
+        "alert_level": level,
+        "basis": "population exposure x alert weight; planning ratios are editable assumptions",
+        "ratios_people_per_unit": RESOURCE_RATIOS,
+        "items": items,
+    }
 
 
 @app.get("/advisories/{advisory_id}/cap")
@@ -627,9 +800,23 @@ def export_advisory_cap(advisory_id: str) -> dict[str, Any]:
     ET.SubElement(info, "instruction").text = advisory["text"]
 
     # Area
+    # CAP polygons must be a single closed ring of "lat,lon" pairs; the convex hull of
+    # the district boundary is a conservative (slightly larger) outline.
+    district = fetch_rows(
+        _database_url(),
+        """
+        SELECT name, state, ST_AsGeoJSON(ST_ExteriorRing(ST_ConvexHull(geom)), 4) AS ring
+        FROM districts WHERE id = %s
+        """,
+        (advisory["district_id"],),
+    )
     area = ET.SubElement(info, "area")
-    ET.SubElement(area, "areaDesc").text = advisory["district_id"]
-    ET.SubElement(area, "polygon").text = ""
+    if district:
+        ring = json.loads(district[0]["ring"])["coordinates"]
+        ET.SubElement(area, "areaDesc").text = f"{district[0]['name']}, {district[0]['state']}"
+        ET.SubElement(area, "polygon").text = " ".join(f"{lat},{lon}" for lon, lat in ring)
+    else:
+        ET.SubElement(area, "areaDesc").text = advisory["district_id"]
 
     # Parameter
     param = ET.SubElement(info, "parameter")
@@ -766,22 +953,23 @@ def nl_query(request: NLQueryRequest) -> dict[str, Any]:
     }
 
 
-class DemoRunRequest(BaseModel):
-    scenario: str
+@app.get("/replay/scenarios")
+def list_replays() -> dict[str, Any]:
+    """Real historical heatwaves that can be replayed through the live alert code."""
+    from pipeline.replay import load_scenarios
+
+    document = load_scenarios()
+    return {"note": document["note"], "scenarios": document["scenarios"]}
 
 
-@app.post("/demo/run")
-def run_demo(request: DemoRunRequest) -> dict[str, Any]:
-    """Run a scripted demo scenario from stored data (no network)."""
-    from pipeline.demo import run_demo_scenario, list_demo_scenarios
-    available = list_demo_scenarios()
-    if request.scenario not in available:
-        raise HTTPException(status_code=404, detail=f"Scenario not found. Available: {available}")
-    return run_demo_scenario(request.scenario)
+@app.get("/replay/{scenario_id}")
+def get_replay(scenario_id: str) -> dict[str, Any]:
+    """Replay one scenario: ERA5 hourly data -> same indices and alert rules as the live path."""
+    from pipeline.replay import run_replay
 
-
-@app.get("/demo/scenarios")
-def list_demos() -> dict[str, Any]:
-    """List available demo scenarios."""
-    from pipeline.demo import list_demo_scenarios
-    return {"scenarios": list_demo_scenarios()}
+    try:
+        return run_replay(scenario_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="unknown scenario")
+    except OSError as error:  # network failure on first (uncached) run
+        raise HTTPException(status_code=503, detail=f"replay data unavailable: {error}")

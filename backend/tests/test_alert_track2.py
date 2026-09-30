@@ -7,10 +7,10 @@ from app.alerts import combine_tracks, evaluate_track2
 
 class Track2AlertTest(unittest.TestCase):
     def test_utci_and_modifiers_are_deterministic(self) -> None:
-        self.assertEqual(evaluate_track2(25.9, 29, 0, None).level, "green")
-        self.assertEqual(evaluate_track2(26, 29, 0, None).level, "yellow")
-        self.assertEqual(evaluate_track2(32, 29, 0, None).level, "orange")
-        self.assertEqual(evaluate_track2(38, 29, 0, None).level, "red")
+        self.assertEqual(evaluate_track2(31.9, 29, 0, None).level, "green")
+        self.assertEqual(evaluate_track2(32, 29, 0, None).level, "yellow")
+        self.assertEqual(evaluate_track2(38, 29, 0, None).level, "orange")
+        self.assertEqual(evaluate_track2(46, 29, 0, None).level, "red")
         self.assertEqual(evaluate_track2(20, 29, 3, None).level, "orange")
         self.assertEqual(evaluate_track2(20, 29, 0, 0.9).level, "red")
 

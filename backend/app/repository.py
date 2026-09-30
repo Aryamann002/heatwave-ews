@@ -74,7 +74,7 @@ def ensure_operational_tables(database_url: str) -> None:
             district_id text NOT NULL REFERENCES districts(id),
             forecast_date date NOT NULL,
             run_id text NOT NULL REFERENCES model_runs(run_id),
-            language text NOT NULL CHECK (language IN ('en', 'hi')),
+            language text NOT NULL,
             alert_level text NOT NULL,
             text text NOT NULL,
             template_version text NOT NULL,
@@ -133,6 +133,21 @@ def ensure_operational_tables(database_url: str) -> None:
         for statement in statements:
             cursor.execute(statement)
         cursor.execute("ALTER TABLE thermal_indices ALTER COLUMN heat_index_c DROP NOT NULL")
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS climatology_daily (
+                district_id text REFERENCES districts(id), day_of_year integer NOT NULL,
+                normal_tmax_c double precision NOT NULL, p90_tmax_c double precision NOT NULL,
+                p90_tmin_c double precision NOT NULL, source text NOT NULL,
+                PRIMARY KEY (district_id, day_of_year)
+            )
+            """
+        )
+        # Resource allocation: tie a task to a ward and a resource quantity.
+        cursor.execute("ALTER TABLE response_tasks ADD COLUMN IF NOT EXISTS ward_id text")
+        cursor.execute("ALTER TABLE response_tasks ADD COLUMN IF NOT EXISTS quantity integer")
+        # Regional-language advisories (LLM translations of the approved English text).
+        cursor.execute("ALTER TABLE advisory_drafts DROP CONSTRAINT IF EXISTS advisory_drafts_language_check")
 
 
 def data_status(database_url: str) -> dict[str, Any]:

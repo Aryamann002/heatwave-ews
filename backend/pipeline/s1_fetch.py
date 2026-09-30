@@ -43,7 +43,10 @@ def fetch_open_meteo(
     run_dir = Path(output_dir) / run_id
     manifest_path = run_dir / "manifest.json"
     if manifest_path.exists():
-        return json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        # Reuse only if it covers exactly the configured districts (config may have grown).
+        if [item["district_id"] for item in manifest["files"]] == [d["id"] for d in districts]:
+            return manifest
 
     run_dir.mkdir(parents=True, exist_ok=True)
     files = []
@@ -54,7 +57,7 @@ def fetch_open_meteo(
                 "longitude": district["longitude"],
                 "hourly": ",".join(HOURLY_FIELDS),
                 "forecast_days": 7,
-                "timezone": "UTC",
+                "timezone": "Asia/Kolkata",  # daily aggregation uses the local (IST) day
                 "wind_speed_unit": "ms",
             }
         )

@@ -44,7 +44,7 @@ class OpenMeteoFetchTest(unittest.TestCase):
             stored = Path(directory) / first["run_id"] / first["files"][0]["path"]
             self.assertTrue(stored.exists())
             self.assertEqual(len(first["files"][0]["sha256"]), 64)
-            self.assertIn("timezone=UTC", calls[0])
+            self.assertIn("timezone=Asia%2FKolkata", calls[0])
             self.assertIn("wind_speed_unit=ms", calls[0])
             self.assertIn("direct_radiation", calls[0])
 

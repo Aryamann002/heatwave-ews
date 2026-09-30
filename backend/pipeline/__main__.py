@@ -17,6 +17,14 @@ def _scalar(database_url: str, query: str):
 
 def main() -> None:
     database_url = os.environ["DATABASE_URL"]
+    # Normals must exist before alerts are computed, so IMD departure rules can apply.
+    try:
+        from pipeline.climatology import main as load_climatology
+
+        load_climatology(missing_only=True)
+    except Exception as error:  # non-fatal: Track 1 falls back to absolute thresholds
+        print(f"climatology load skipped: {error}", file=sys.stderr, flush=True)
+
     ok = run_operational(database_url)
     if ok:
         print("forecast run: OK", flush=True)

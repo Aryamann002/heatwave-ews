@@ -6,6 +6,6 @@
   "license": "Creative Commons Attribution 2.5 India",
   "attribution": "District boundaries provided by DataMeet Community Maps Project.",
   "derived_file": "config/pilot_districts.geojson",
-  "derived_file_sha256": "a11d6a86bbfb1cb7f062eeed578e33f2f14dd22bc5518368064789230bb3b8b9",
-  "transformation": "Selected Census codes 474, 94, and 603 and converted the source shapefile to GeoJSON with mapshaper 0.7.69; geometry was not simplified."
+  "derived_file_sha256": "be6e4d95dbd465412dd466fc76583a8688963f1fb2f571bcdad87210534b6b38",
+  "transformation": "Selected 29 heat-prone districts by Census 2011 (ST_CEN_CD, DT_CEN_CD) from 2011_Dist.shp and converted to GeoJSON with mapshaper 0.7.69 (-simplify 15% keep-shapes, precision 0.0001). Geometry is made valid with ST_MakeValid on load. District list: config/districts.yaml."
 }

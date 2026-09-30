@@ -1,0 +1,33 @@
+{
+  "note": "Real historical periods replayed through the live index and alert code using ERA5 reanalysis (Open-Meteo archive). ERA5 is a ~25 km grid, so peak values run a few degrees below station records.",
+  "scenarios": [
+    {
+      "id": "north-india-may-2024",
+      "title": "North & Central India heatwave, May 2024",
+      "start": "2024-05-26",
+      "end": "2024-06-01",
+      "context": "Prolonged dry heat across Rajasthan, Delhi, UP and MP; IMD stations reported ~50 C at Churu and Phalodi."
+    },
+    {
+      "id": "odisha-ap-april-2024",
+      "title": "East coast humid heat, late April 2024",
+      "start": "2024-04-26",
+      "end": "2024-05-02",
+      "context": "Heatwave over Odisha, Gangetic West Bengal and coastal Andhra Pradesh, with high humidity along the coast."
+    },
+    {
+      "id": "bihar-june-2019",
+      "title": "Bihar humid heatwave, June 2019",
+      "start": "2019-06-13",
+      "end": "2019-06-19",
+      "context": "Humid heat over south Bihar (Gaya, Aurangabad) linked to a large number of heat deaths; delayed monsoon."
+    },
+    {
+      "id": "andhra-telangana-may-2015",
+      "title": "Andhra Pradesh & Telangana heatwave, May 2015",
+      "start": "2015-05-20",
+      "end": "2015-05-26",
+      "context": "One of India's deadliest heatwaves, concentrated in Andhra Pradesh and Telangana."
+    }
+  ]
+}

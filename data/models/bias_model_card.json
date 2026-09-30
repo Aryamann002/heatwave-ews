@@ -12,7 +12,7 @@
     "2024-01-01",
     "2025-12-31"
   ],
-  "samples": 20242,
+  "samples": 56538,
   "evaluation": {
     "protocol": "leave-one-year-out",
     "years": [
@@ -25,46 +25,46 @@
         "train_years": [
           2025
         ],
-        "test_count": 9657
+        "test_count": 26973
       },
       {
         "held_out_year": 2025,
         "train_years": [
           2024
         ],
-        "test_count": 10585
+        "test_count": 29565
       }
     ],
     "groups": [
       {
         "climate_zone": "coastal",
         "lead_day": 1,
-        "count": 2792,
-        "raw_mae_c": 0.7715616045845273,
-        "corrected_mae_c": 0.5457439252607962,
+        "count": 4188,
+        "raw_mae_c": 0.8473256924546323,
+        "corrected_mae_c": 0.6135174447101055,
         "use_correction": true,
         "selected": "corrected",
-        "selected_mae_c": 0.5457439252607962
+        "selected_mae_c": 0.6135174447101055
       },
       {
         "climate_zone": "hills",
         "lead_day": 1,
-        "count": 698,
-        "raw_mae_c": 0.7197707736389685,
-        "corrected_mae_c": 0.6660369383925872,
+        "count": 8376,
+        "raw_mae_c": 0.9982569245463228,
+        "corrected_mae_c": 0.7609922954708448,
         "use_correction": true,
         "selected": "corrected",
-        "selected_mae_c": 0.6660369383925872
+        "selected_mae_c": 0.7609922954708448
       },
       {
         "climate_zone": "plains",
         "lead_day": 1,
-        "count": 16752,
-        "raw_mae_c": 0.6295964660936008,
-        "corrected_mae_c": 0.5198652630850787,
+        "count": 43974,
+        "raw_mae_c": 0.6464092418247146,
+        "corrected_mae_c": 0.5380138711950265,
         "use_correction": true,
         "selected": "corrected",
-        "selected_mae_c": 0.5198652630850787
+        "selected_mae_c": 0.5380138711950265
       }
     ]
   }

@@ -266,11 +266,11 @@ Held-out results (from `data/models/bias_model_card.json`):
 
 | Zone | Held-out day pairs | Raw forecast MAE | Corrected MAE | Used |
 |---|---|---|---|---|
-| coastal | 2,792 | 0.77 °C | 0.55 °C | yes |
-| hills | 698 | 0.72 °C | 0.67 °C | yes |
-| plains | 16,752 | 0.63 °C | 0.52 °C | yes |
+| coastal | 4,188 | 0.85 °C | 0.61 °C | yes |
+| hills | 8,376 | 1.00 °C | 0.76 °C | yes |
+| plains | 43,974 | 0.65 °C | 0.54 °C | yes |
 
-Trained on 20,242 forecast/ERA5 day pairs from the original 29 districts; the hills model came from one hills district (Shimla). Retraining with all 81 districts is in progress; the dashboard's *AI bias correction* panel always shows the current model card.
+Trained on 56,538 forecast/ERA5 day pairs from all 81 districts.
 
 Only Tmax (and therefore Track 1) is corrected; indices use the raw hourly forecast. An early training run showed zero error because, without an explicit model, the historical-forecast service silently returned ERA5 itself. That run was discarded, and training now refuses to run if most forecast values equal the target.
 

@@ -140,3 +140,4 @@ footer { margin-top: 26px; padding-top: 14px; border-top: 1px solid #d9ded8; col
 .ranking-tools { display: flex; gap: 6px; align-items: center; }
 .ranking-tools input { padding: 5px 9px; border: 1px solid #ced5ce; border-radius: 16px; font-size: .72rem; background: white; }
 .ranking-tools button { border: 1px solid #ced5ce; background: transparent; padding: 5px 10px; border-radius: 16px; font-size: .72rem; cursor: pointer; color: #3f4d46; }
+.tracks em.ahead { color: #173e32; }

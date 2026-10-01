@@ -64,6 +64,16 @@ export function DistrictPanel({ districtId, district, dayIndex, vulnerability, r
   const index = indices[dayIndex];
   const level = alerts?.emission_blocked ? "blocked" : alert?.level ?? "green";
   const dates = forecast.map((item) => item.date);
+  // Track 1 looks ahead: a day can carry an IMD warning because of heat-wave days later in the forecast.
+  const conditionOf = (item: { reasoning: string[] }) => item.reasoning.find((reason) => reason.startsWith("condition="))?.slice(10);
+  const aheadDays = alert && alert.track1_level !== "green" && conditionOf(alert) === "normal"
+    ? (alerts?.items ?? []).slice(dayIndex + 1).filter((item) => conditionOf(item) !== "normal")
+    : [];
+  const aheadText = aheadDays.length
+    ? `${aheadDays.some((item) => conditionOf(item) === "severe_heat_wave") ? "Severe heat wave" : "Heat wave"} forecast for ${
+        aheadDays.length === 1 ? shortDate(aheadDays[0].date) : `${shortDate(aheadDays[0].date)} – ${shortDate(aheadDays[aheadDays.length - 1].date)}`
+      } — the IMD-criteria warning starts early.`
+    : "";
 
   return (
     <>
@@ -97,6 +107,7 @@ export function DistrictPanel({ districtId, district, dayIndex, vulnerability, r
             <span>IMD criteria (Track 1) <b className={`level-text ${alert.track1_level}`}>{alert.track1_level}</b></span>
             <span>Human thermal stress (Track 2) <b className={`level-text ${alert.track2_level}`}>{alert.track2_level}</b></span>
             {alert.disagreement && <em>Tracks disagree · higher level issued (max-of-tracks)</em>}
+            {aheadText && <em className="ahead">{aheadText}</em>}
           </div>
           <details className="reasoning">
             <summary>Why {level} on {shortDate(alert.date)} · rule {alert.rule_version}</summary>

@@ -13,6 +13,7 @@ from urllib.request import urlopen
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 FORECAST_MODEL = "ecmwf_ifs025"  # ECMWF IFS 0.25 deg open data
+BATCH_SIZE = 50
 HOURLY_FIELDS = (
     "temperature_2m",
     "relative_humidity_2m",
@@ -76,11 +77,13 @@ def fetch_open_meteo(
 
     run_dir.mkdir(parents=True, exist_ok=True)
     files = []
-    for district in districts:
+    # Many locations per request (Open-Meteo returns a list); keeps a 641-district run to ~13 requests.
+    for start in range(0, len(districts), BATCH_SIZE):
+        batch = districts[start:start + BATCH_SIZE]
         query = urlencode(
             {
-                "latitude": district["latitude"],
-                "longitude": district["longitude"],
+                "latitude": ",".join(str(district["latitude"]) for district in batch),
+                "longitude": ",".join(str(district["longitude"]) for district in batch),
                 "hourly": ",".join(HOURLY_FIELDS),
                 "forecast_days": 7,
                 "timezone": "Asia/Kolkata",  # daily aggregation uses the local (IST) day
@@ -89,20 +92,23 @@ def fetch_open_meteo(
                 "models": FORECAST_MODEL,
             }
         )
-        body = fetch_bytes(f"{OPEN_METEO_URL}?{query}", opener=opener)
-        document = json.loads(body)
-        if document.get("error") or "hourly" not in document:
-            raise ValueError(f"Open-Meteo response invalid: {document.get('reason', 'missing hourly data')}")
-
-        raw_path = run_dir / f"{district['id']}.json"
-        raw_path.write_bytes(body)
-        files.append(
-            {
-                "district_id": district["id"],
-                "path": raw_path.name,
-                "sha256": hashlib.sha256(body).hexdigest(),
-            }
-        )
+        parsed = json.loads(fetch_bytes(f"{OPEN_METEO_URL}?{query}", opener=opener))
+        documents = parsed if isinstance(parsed, list) else [parsed]
+        if len(documents) != len(batch):
+            raise ValueError(f"Open-Meteo returned {len(documents)} locations for {len(batch)} requested")
+        for district, document in zip(batch, documents, strict=True):
+            if document.get("error") or "hourly" not in document:
+                raise ValueError(f"Open-Meteo response invalid: {document.get('reason', 'missing hourly data')}")
+            body = json.dumps(document).encode()
+            raw_path = run_dir / f"{district['id']}.json"
+            raw_path.write_bytes(body)
+            files.append(
+                {
+                    "district_id": district["id"],
+                    "path": raw_path.name,
+                    "sha256": hashlib.sha256(body).hexdigest(),
+                }
+            )
 
     manifest = {
         "run_id": run_id,

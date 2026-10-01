@@ -14,10 +14,10 @@ Heatwatch turns an open 7-day weather forecast into heat warnings that reflect w
 
 | Fact | Value |
 |---|---|
-| Districts monitored | 81 (Census 2011 boundaries) across 19 states and union territories |
+| Districts monitored | All 641 Census 2011 districts, every state and union territory |
 | Thermal stress indices | 3 — UTCI, estimated WBGT, Heat Index |
 | Forecast | ECMWF IFS 0.25° via Open-Meteo, 7 days, hourly, refreshed every 6 hours |
-| Climate normals | 1991–2020 daily normals per district (ERA5 reanalysis) |
+| Climate normals | 1991–2020 daily normals per district (Copernicus ERA5, adjusted to each forecast point's elevation) |
 | Alert tracks | 2 — IMD heat-wave criteria and human thermal stress; the higher is issued |
 | Staleness gate | Alerts are blocked if forecast data are older than 12 hours or fail quality checks |
 | Ward-level exposure | 539 wards in Ahmedabad (48), New Delhi/NCT (290) and Chennai (201) |
@@ -144,27 +144,27 @@ Key behaviours:
 | Source | Used for | Licence |
 |---|---|---|
 | Open-Meteo forecast API, model `ecmwf_ifs025` | Live 7-day hourly forecast | Open-Meteo terms (non-commercial free tier); ECMWF open data CC BY 4.0 |
-| Open-Meteo historical archive (ERA5) | 1991–2020 normals, historical replays, bias-correction target | CC BY 4.0 (Copernicus ERA5) |
+| Copernicus Climate Data Store, ERA5 hourly 2 m temperature and orography | 1991–2020 normals for all districts | CC BY 4.0 |
+| Open-Meteo historical archive (ERA5) | Historical replays, bias-correction target | CC BY 4.0 (Copernicus ERA5) |
+| Open-Meteo elevation API (Copernicus 90 m DEM) | Terrain for the climate-zone rule | Copernicus DEM licence |
+| Natural Earth 10 m coastline | Coastal-zone rule | Public domain |
 | Open-Meteo historical forecast API (IFS) | 2024–2025 forecast history for training | As above |
 | WorldPop 2020 India 1 km population | Ward population exposure | CC BY 4.0 |
 | DataMeet Census 2011 district boundaries | District polygons | CC BY 2.5 India |
 | DataMeet municipal ward boundaries | Ahmedabad, Delhi, Chennai wards | CC BY-SA 2.5 India |
 
-All sources are pinned in config (`config/boundary_source.json`, `config/vulnerability_source.json`) with commit hashes or checksums. Expensive-to-rebuild caches are committed to the repository: `data/raw/climatology/` (30-year normals), `data/raw/bias_training/`, `data/replay/` and `data/models/`.
+All sources are pinned in config (`config/boundary_source.json`, `config/vulnerability_source.json`) with commit hashes or checksums. Expensive-to-rebuild results are committed to the repository: `data/climatology/normals_era5.json` (1991–2020 normals for all 641 districts), `data/raw/bias_training/`, `data/replay/` and `data/models/`. The 2.7 GB of raw ERA5 hourly files are not committed; `python -m pipeline.climatology cds` rebuilds them with a Copernicus key.
 
 ### Coverage
 
-81 districts: 63 plains, 12 hills, 6 coastal (zones used by IMD criteria).
+All 641 Census 2011 districts: 465 plains, 92 coastal, 84 hills (the zone decides which IMD criteria apply).
 
-| State / UT | Districts |
+| How it was set | Districts |
 |---|---|
-| Uttar Pradesh | 10 |
-| Madhya Pradesh, Maharashtra | 7 each |
-| Delhi, Tamil Nadu | 6 each |
-| Arunachal Pradesh, Assam, Jammu and Kashmir, Jharkhand, Punjab, Rajasthan | 5 each |
-| Andhra Pradesh | 4 |
-| Bihar, Gujarat, Ladakh, Odisha | 2 each |
-| Himachal Pradesh, Telangana, West Bengal | 1 each |
+| Hand-chosen forecast point (city) and zone | 81 heat-prone and demo districts |
+| Automatic forecast point (guaranteed inside the district) and rule-based zone | 560 |
+
+The zone rule (`scripts/build_all_districts.py`): **hills** if the median of 7 sampled elevations is at least 1000 m, or at least 400 m with 800 m of relief (this separates hill districts like Idukki from flat plateaus like Bengaluru); **coastal** if the district is within 25 km of the coastline; otherwise **plains**.
 
 ---
 
@@ -209,7 +209,7 @@ Rules are versioned in `config/alert_rules.yaml` (version `imd-track1-2026-09-28
 | Plains absolute rule | ≥ 45 °C heat wave, ≥ 47 °C severe |
 | Colours from persistence | Yellow: 2 consecutive heat-wave days. Orange: 4 heat-wave days or 2 severe. Red: 3 severe days or more than 6 hot days. |
 
-The normal for a day is the mean ERA5 Tmax within ±7 days across 1991–2020. Persistence looks ahead through the forecast (early warning); a hot day also keeps the hot spell it belongs to, so the last days of a spell are not reset to green.
+The normal for a day is the mean daily Tmax within ±7 days across 1991–2020. Daily Tmax and Tmin come from hourly ERA5 at the hottest and coolest hours of the IST day (the same definition the forecast uses), interpolated to the forecast point and adjusted to its elevation with the standard 6.5 °C/km lapse rate. Persistence looks ahead through the forecast (early warning); a hot day also keeps the hot spell it belongs to, so the last days of a spell are not reset to green.
 
 ### Track 2 — human thermal stress
 
@@ -233,7 +233,7 @@ Bhubaneswar, 28 May 2024, from the ERA5 replay:
 
 | Measure | Value |
 |---|---|
-| Maximum temperature | 37.9 °C, +1.2 °C above the 1991–2020 normal |
+| Maximum temperature | 37.9 °C, +1.4 °C above the 1991–2020 normal |
 | Track 1 (IMD criteria) | **Green** — well short of a heat wave |
 | Relative humidity at the hottest hour | 58% |
 | Estimated WBGT | 35.5 °C |
@@ -270,7 +270,7 @@ Held-out results (from `data/models/bias_model_card.json`):
 | hills | 8,376 | 1.00 °C | 0.76 °C | yes |
 | plains | 43,974 | 0.65 °C | 0.54 °C | yes |
 
-Trained on 56,538 forecast/ERA5 day pairs from all 81 districts.
+Trained on 56,538 forecast/ERA5 day pairs from the 81 districts covered when it was trained; the per-zone models apply to all 641 districts.
 
 Only Tmax (and therefore Track 1) is corrected; indices use the raw hourly forecast. An early training run showed zero error because, without an explicit model, the historical-forecast service silently returned ERA5 itself. That run was discarded, and training now refuses to run if most forecast values equal the target.
 
@@ -329,12 +329,12 @@ Roles: viewer, officer, admin. Only officers and admins can approve advisories. 
 
 A replay fetches ERA5 hourly data for a past 7-day period and runs it through exactly the same QC, index and alert code as the live forecast. It shows how the system would have classified a real event. Results are cached so replays work offline.
 
-| Scenario | Dates | Red districts per day (of 81) | Hottest Tmax in replay |
+| Scenario | Dates | Red districts per day (of 641) | Hottest Tmax in replay |
 |---|---|---|---|
-| North & Central India heatwave | 26 May – 1 Jun 2024 | 20, 20, 21, 19, 14, 16, 8 | 48.6 °C, Banda, 28 May |
-| East coast humid heat | 26 Apr – 2 May 2024 | 2, 2, 2, 2, 2, 1, 1 | 44.7 °C, Jamshedpur, 30 Apr |
-| Bihar humid heatwave | 13 – 19 Jun 2019 | 1, 1, 2, 1, 1, 0, 0 | 44.7 °C, Gaya, 15 Jun |
-| Andhra Pradesh & Telangana heatwave | 20 – 26 May 2015 | 0, 0, 1, 1, 0, 2, 0 | 45.5 °C, Vijayawada, 22 May |
+| North & Central India heatwave | 26 May – 1 Jun 2024 | 96, 105, 126, 107, 78, 69, 45 | 48.6 °C, Banda, 28 May |
+| East coast humid heat | 26 Apr – 2 May 2024 | 33, 33, 33, 33, 33, 29, 25 | 46.1 °C, Guntur, 1 May |
+| Bihar humid heatwave | 13 – 19 Jun 2019 | 15, 15, 23, 15, 12, 5, 5 | 45.0 °C, Nawada, 15 Jun |
+| Andhra Pradesh & Telangana heatwave | 20 – 26 May 2015 | 3, 5, 4, 4, 3, 6, 3 | 46.5 °C, Guntur, 21 May |
 
 ERA5 is a ~25 km reanalysis that smooths extremes, so replay peaks run a few degrees below station records. A replay shows the rules applied to what happened, not how a forecast issued at the time would have performed.
 
@@ -415,7 +415,7 @@ docker compose run --rm backend python -m models.train_bias   # retrain bias cor
 ```
 
 - Dashboard: http://localhost:5173 · Landing page: http://localhost:5173/landing.html · API docs: http://localhost:8000/docs
-- **Adding districts:** add entries (id, name, state, forecast point, climate zone, Census 2011 codes) to `config/districts.yaml`, regenerate `config/pilot_districts.geojson` from the pinned Census 2011 shapefile, then run the pipeline (normals load for missing districts only), recompute replays, retrain, and run `python scripts/build_landing_map.py`.
+- **District list:** `scripts/build_all_districts.py` builds `config/districts.yaml` and `config/pilot_districts.geojson` from the Census 2011 shapefile (points, zones, state names). After changing districts: `python -m pipeline.climatology cds` (normals), run the pipeline, `python -m pipeline.replay`, optionally `python -m models.train_bias`, then `python scripts/build_landing_map.py`.
 
 ---
 
@@ -437,14 +437,14 @@ Main limitations (full list in `docs/LIMITATIONS.md`):
 - Each district is represented by one forecast point; small neighbouring districts (for example in Delhi) share a forecast grid cell.
 - Normals come from ERA5 reanalysis, which smooths extremes; they differ from IMD station normals.
 - Track 2 thresholds and resource planning ratios are unvalidated assumptions.
-- Climate zones for each district were assigned by the team, not by IMD.
+- Climate zones come from a terrain rule (and, for 81 districts, the team), not from IMD.
 - The Tmax correction is trained on two years and on the first forecast day only.
 - There is no authentication; dispatch gateways are simulated.
 - Boundaries are Census 2011 (community-maintained), not current official boundaries.
 
 Future scope:
 
-- **All-India coverage** (641 Census 2011 districts): normals from a single Copernicus ERA5 download with district-average statistics instead of point values.
+- **Current district boundaries** (~780 districts): needs an official post-2011 boundary set.
 - Event classifier with calibrated probabilities once a labelled historical dataset is available.
 - Authentication, real SMS and email gateways, integration with state Heat Action Plans.
 - Urban heat island and land-surface temperature layers; nowcasting for the next 0–6 hours.

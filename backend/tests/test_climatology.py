@@ -1,7 +1,9 @@
 import unittest
 from datetime import date, timedelta
 
-from pipeline.climatology import compute_normals
+import numpy as np
+
+from pipeline.climatology import _bilinear, compute_normals
 from pipeline.operational import consecutive_hot_nights, evaluate_days
 
 
@@ -33,6 +35,12 @@ class ClimatologyTest(unittest.TestCase):
         self.assertEqual(levels[:3], ["red", "red", "red"])  # day 3 is still red, not reset
         self.assertEqual(levels[3], "green")
 
+
+    def test_bilinear_weights_on_a_descending_grid(self) -> None:
+        latitudes = np.array([30.0, 29.75, 29.5])  # ERA5 latitudes run north to south
+        lower, upper, weight = _bilinear(latitudes, np.array([29.6]))
+        value = latitudes[lower] * (1 - weight) + latitudes[upper] * weight
+        self.assertAlmostEqual(float(value[0]), 29.6)
 
 if __name__ == "__main__":
     unittest.main()

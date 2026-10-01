@@ -16,7 +16,7 @@ LEVEL_COLOUR = {"green": "#2f855a", "yellow": "#e9b949", "orange": "#e97824", "r
 REPLAY_DATE = "2024-05-28"
 LABELLED = ("banda", "new-delhi", "barmer", "kolkata", "chennai", "hyderabad", "ahmedabad", "leh", "guwahati")
 WIDTH, HEIGHT = 540, 560
-LON0, LON1, LAT0, LAT1 = 67.5, 97.8, 7.8, 36.2  # frame covering Ladakh, Arunachal and Tamil Nadu
+LON0, LON1, LAT0, LAT1 = 67.5, 97.8, 6.0, 37.2  # all-India frame incl. Kashmir, Arunachal, Andaman and Nicobar
 
 
 def main() -> None:

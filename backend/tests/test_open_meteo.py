@@ -49,6 +49,29 @@ class OpenMeteoFetchTest(unittest.TestCase):
             self.assertIn("direct_radiation", calls[0])
 
 
+    def test_batched_request_splits_locations_into_per_district_files(self) -> None:
+        calls: list[str] = []
+
+        class Response(io.BytesIO):
+            def __enter__(self) -> "Response":
+                return self
+
+            def __exit__(self, *_: object) -> None:
+                self.close()
+
+        def opener(url: str, timeout: int) -> Response:
+            calls.append(url)
+            return Response(json.dumps([
+                {"latitude": 1.0, "hourly": {"time": ["2026-05-01T00:00"]}},
+                {"latitude": 2.0, "hourly": {"time": ["2026-05-01T00:00"]}},
+            ]).encode())
+
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = fetch_open_meteo(load_districts()[:2], datetime(2026, 5, 1, tzinfo=UTC), directory, opener)
+            self.assertEqual(len(calls), 1)
+            stored = [json.loads((Path(directory) / manifest["run_id"] / item["path"]).read_text()) for item in manifest["files"]]
+            self.assertEqual([doc["latitude"] for doc in stored], [1.0, 2.0])
+
     def test_fetch_retries_a_dropped_connection_but_not_a_bad_request(self) -> None:
         from io import BytesIO
         from urllib.error import HTTPError

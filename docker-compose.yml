@@ -46,6 +46,8 @@ services:
     environment:
       DATABASE_URL: postgresql://heatwave@postgres:5432/heatwave
       ALLOW_UNPINNED_POPULATION: ${ALLOW_UNPINNED_POPULATION:-0}
+      CDSAPI_URL: ${CDSAPI_URL:-}
+      CDSAPI_KEY: ${CDSAPI_KEY:-}
     volumes:
       - ./data:/app/data
 
@@ -70,6 +72,8 @@ services:
     environment:
       DATABASE_URL: postgresql://heatwave@postgres:5432/heatwave
       ALLOW_UNPINNED_POPULATION: ${ALLOW_UNPINNED_POPULATION:-0}
+      CDSAPI_URL: ${CDSAPI_URL:-}
+      CDSAPI_KEY: ${CDSAPI_KEY:-}
     volumes:
       - ./data:/app/data
     restart: unless-stopped

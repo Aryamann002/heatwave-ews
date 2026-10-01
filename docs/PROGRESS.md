@@ -88,3 +88,11 @@
 - **Dashboard:** rewritten into `api.ts`, `MapView.tsx`, `DistrictPanel.tsx`, `OpsPanel.tsx`: layer switch (alert/UTCI/WBGT/HI/departure), 7-day selector, district ranking, 7-day chart vs normal, ward choropleth, advisories/approval/CAP/dispatch, resource allocation and tasks, audit log, question box, replay mode, polling. Verified with `tsc`, `vite build` and browser screenshots.
 - **ML:** `models/train_bias.py` trains the existing per-zone LightGBM Tmax corrector on 2024–2025 ECMWF IFS forecast/ERA5 pairs with leave-one-year-out evaluation; applied only where held-out MAE improves; results at `/model-card`.
 - **Tests:** 75 unit/integration tests; `make test` now uses a separate `heatwave_test` database so tests no longer overwrite demo data.
+
+## 2026-10-01 — all-India coverage
+
+- **Districts:** all 641 Census 2011 districts (`scripts/build_all_districts.py`). 81 keep hand-set points and zones; 560 get an automatic interior forecast point and a rule-based zone (hills: median sampled elevation ≥ 1000 m, or ≥ 400 m with ≥ 800 m relief; coastal: within 25 km of the Natural Earth coastline). Verified: every forecast point lies inside its district (`ST_Covers` test, 641/641).
+- **Normals:** Copernicus ERA5 hourly 2 m temperature 1991–2020 (5 requests of 6 years; the daily-statistics dataset was abandoned because it allows one year per request and runs one request at a time). IST daily max/min, bilinear at the forecast point, lapse-rate adjusted to point elevation. Committed as `data/climatology/normals_era5.json`; the pipeline only loads this file. Verified against the earlier Open-Meteo normals for 81 districts: median difference 0.47 °C; Kashmir Valley 2–3 °C warmer.
+- **Fetching:** forecast and replay requests batch 50 locations; shared `fetch_bytes` retries dropped connections, 429 and 5xx.
+- **Replays:** recomputed for 641 districts (28 May 2024: 126 red).
+- **Open issue (needs a decision):** the Track 2 hot-night rule compares Tmin with each district's own 90th percentile and has no absolute floor, so cold mountain districts are escalated on mild nights (e.g. Leh orange with Tmin 7.5 °C). In the replays this changed the issued level on 168 district-days with Tmin < 25 °C.

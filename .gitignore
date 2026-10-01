@@ -10,6 +10,7 @@ data/*
 !data/.gitkeep
 # Committed caches: slow or rate-limited to rebuild (ERA5 via Open-Meteo, CC BY 4.0)
 !data/replay/
+!data/climatology/
 !data/models/
 !data/raw/
 data/raw/*

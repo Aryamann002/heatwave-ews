@@ -8,15 +8,13 @@ evaluate_days. The computed result is cached to disk so a replay works without n
 import json
 import math
 import os
-import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
-from urllib.request import urlopen
 
 from pipeline.climatology import load_normals
 from pipeline.operational import evaluate_days, harmonise_district_forecast
-from pipeline.s1_fetch import HOURLY_FIELDS, load_districts
+from pipeline.s1_fetch import HOURLY_FIELDS, fetch_bytes, load_districts
 
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 
@@ -25,30 +23,28 @@ def load_scenarios(path: str | Path = "config/replay_scenarios.json") -> dict[st
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def _fetch_hourly(district: dict[str, Any], start: str, end: str) -> dict[str, Any]:
-    query = urlencode(
-        {
-            "latitude": district["latitude"],
-            "longitude": district["longitude"],
-            "start_date": start,
-            "end_date": end,
-            "hourly": ",".join(HOURLY_FIELDS),
-            "timezone": "Asia/Kolkata",
-            "wind_speed_unit": "ms",
-        }
-    )
-    for attempt in range(4):  # archive API: transient TLS timeouts and 429s under load
-        try:
-            with urlopen(f"{ARCHIVE_URL}?{query}", timeout=60) as response:
-                document = json.loads(response.read())
-            break
-        except OSError:
-            if attempt == 3:
-                raise
-            time.sleep(10 * (attempt + 1))
-    if "hourly" not in document:
-        raise ValueError(f"archive response invalid for {district['id']}: {document.get('reason')}")
-    return document
+def _fetch_hourly(districts: list[dict[str, Any]], start: str, end: str, batch_size: int = 50) -> list[dict[str, Any]]:
+    """Hourly ERA5 for many points, several locations per archive request (same order as districts)."""
+    documents: list[dict[str, Any]] = []
+    for offset in range(0, len(districts), batch_size):
+        batch = districts[offset:offset + batch_size]
+        query = urlencode(
+            {
+                "latitude": ",".join(str(district["latitude"]) for district in batch),
+                "longitude": ",".join(str(district["longitude"]) for district in batch),
+                "start_date": start,
+                "end_date": end,
+                "hourly": ",".join(HOURLY_FIELDS),
+                "timezone": "Asia/Kolkata",
+                "wind_speed_unit": "ms",
+            }
+        )
+        parsed = json.loads(fetch_bytes(f"{ARCHIVE_URL}?{query}", timeout=120, attempts=6, wait_s=60))
+        batch_documents = parsed if isinstance(parsed, list) else [parsed]
+        if len(batch_documents) != len(batch) or any("hourly" not in document for document in batch_documents):
+            raise ValueError(f"archive response invalid near {batch[0]['id']}")
+        documents += batch_documents
+    return documents
 
 
 def _number(value: Any) -> float | None:
@@ -62,17 +58,18 @@ def run_replay(scenario_id: str, cache_dir: str | Path = "data/replay") -> dict[
     if scenario is None:
         raise KeyError(scenario_id)
     cache = Path(cache_dir) / f"{scenario_id}.json"
+    districts = load_districts()
     if cache.exists():
-        return json.loads(cache.read_text(encoding="utf-8"))
+        cached = json.loads(cache.read_text(encoding="utf-8"))
+        # Reuse only if it covers the configured districts (the district list may have grown).
+        if {row["district_id"] for row in cached["items"]} == {district["id"] for district in districts}:
+            return cached
 
     database_url = os.environ["DATABASE_URL"]
     items = []
-    for district in load_districts():
-        days = harmonise_district_forecast(
-            _fetch_hourly(district, scenario["start"], scenario["end"]),
-            district["latitude"],
-            district["longitude"],
-        )
+    hourly = _fetch_hourly(districts, scenario["start"], scenario["end"])
+    for district, document_hourly in zip(districts, hourly, strict=True):
+        days = harmonise_district_forecast(document_hourly, district["latitude"], district["longitude"])
         climatology = load_normals(database_url, district["id"])
         normals = [climatology.get(day["date"].timetuple().tm_yday) for day in days]
         for day, normal, (condition, track1, track2, combined) in zip(

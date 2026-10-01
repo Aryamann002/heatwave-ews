@@ -1,5 +1,7 @@
 # ARCHITECTURE.md
 
+> **Design-phase document.** It records the original plan. For the system as built — 641 districts, ERA5 normals, replays, bias correction, dashboard and API — see [`PROJECT_OVERVIEW.md`](PROJECT_OVERVIEW.md).
+
 ## Assumptions (attack these)
 
 1. Prototype scale: India-wide at **district** level; 1–2 pilot cities at finer grid.

@@ -1,5 +1,7 @@
 # PRD.md — Extreme Heatwave Early Warning & Human Thermal Stress Index
 
+> **Design-phase document.** It records the original plan. For the system as built — 641 districts, ERA5 normals, replays, bias correction, dashboard and API — see [`PROJECT_OVERVIEW.md`](PROJECT_OVERVIEW.md).
+
 Sponsor context: Ministry of Earth Sciences (MoES). Category: Software. Theme: Disaster Management.
 
 ## 1. Problem

@@ -1,5 +1,7 @@
 # PIPELINE.md
 
+> **Design-phase document.** It records the original plan. For the system as built — 641 districts, ERA5 normals, replays, bias correction, dashboard and API — see [`PROJECT_OVERVIEW.md`](PROJECT_OVERVIEW.md).
+
 ## Overview
 
 Two pipelines share code but run on different schedules.

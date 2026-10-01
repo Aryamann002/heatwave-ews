@@ -1,5 +1,7 @@
 # IMPLEMENTATION_PLAN.md
 
+> **Design-phase document.** It records the original plan. For the system as built — 641 districts, ERA5 normals, replays, bias correction, dashboard and API — see [`PROJECT_OVERVIEW.md`](PROJECT_OVERVIEW.md).
+
 Each task is sized for one agent session, has acceptance criteria, and lists the doc sections it depends on. Build in order; do not skip ahead. **Phase 1 delivers a demo-able product by itself.** Later phases add depth.
 
 Time estimates are deliberately omitted; I have no basis for your team's speed. Use the phase gates instead.

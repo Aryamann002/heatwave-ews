@@ -10,6 +10,20 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      # Integration tests need PostGIS, as in docker-compose.yml.
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: heatwave_test
+          POSTGRES_USER: heatwave
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U heatwave -d heatwave_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://heatwave@localhost:5432/heatwave_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -18,6 +32,8 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.lock
       - run: pip install -r requirements.lock
+      # The backend reads config/ relative to its own directory (the Dockerfile copies it in).
+      - run: cp -r ../config ./config
       - run: python -m unittest discover -s tests
       - run: python -m compileall -q .
 

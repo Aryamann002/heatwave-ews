@@ -199,7 +199,7 @@ flowchart TD
 
 ### Track 1 — IMD heat-wave criteria
 
-Rules are versioned in `config/alert_rules.yaml` (version `imd-track1-2026-09-28`), taken from IMD's heat-wave criteria.
+Rules are versioned in `config/alert_rules.yaml` (version `heatwatch-rules-2026-10-01`), taken from IMD's heat-wave criteria.
 
 | Rule | Value |
 |---|---|
@@ -216,7 +216,7 @@ The normal for a day is the mean daily Tmax within ±7 days across 1991–2020. 
 | Rule | Value |
 |---|---|
 | UTCI (UTCI assessment scale) | ≥ 32 °C yellow (strong stress), ≥ 38 °C orange (very strong), ≥ 46 °C red (extreme) |
-| Hot nights | Consecutive days with Tmin ≥ the 1991–2020 90th-percentile Tmin: 2 → yellow, 3 → orange |
+| Hot nights | Consecutive days with Tmin ≥ both the 1991–2020 90th-percentile Tmin and 25 °C: 2 → yellow, 3 → orange |
 | Estimated WBGT | Shown in the reasoning; does not escalate on its own |
 
 Track 2 thresholds are labelled `unvalidated_assumption` in config. They follow the published UTCI scale but have not been calibrated against Indian health outcomes.

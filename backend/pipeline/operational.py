@@ -10,7 +10,7 @@ from typing import Any
 
 import psycopg
 
-from app.alerts import classify_track1_day, combine_tracks, evaluate_track1, evaluate_track2
+from app.alerts import classify_track1_day, combine_tracks, evaluate_track1, evaluate_track2, load_alert_rules
 from app.repository import ensure_operational_tables
 from app.districts import seed_districts
 from indices.heat_index import calculate_heat_index
@@ -120,12 +120,13 @@ def harmonise_district_forecast(
 
 
 def consecutive_hot_nights(
-    days: list[dict[str, Any]], normals: list[tuple[float, float, float] | None]
+    days: list[dict[str, Any]], normals: list[tuple[float, float, float] | None], min_tmin_c: float = 25.0
 ) -> list[int]:
-    """Running count of consecutive days whose Tmin reaches the 1991-2020 p90 Tmin."""
+    """Running count of consecutive days whose Tmin (degrees C) reaches both the 1991-2020 p90 Tmin
+    and an absolute floor, so an unusually mild night in a cold district is not a hot night."""
     counts, run = [], 0
     for day, normal in zip(days, normals, strict=True):
-        run = run + 1 if normal is not None and day["tmin_c"] >= normal[2] else 0
+        run = run + 1 if normal is not None and day["tmin_c"] >= max(normal[2], min_tmin_c) else 0
         counts.append(run)
     return counts
 
@@ -138,7 +139,7 @@ def evaluate_days(
         classify_track1_day(climate_zone, day["tmax_c"], normal[0] if normal else None)
         for day, normal in zip(days, normals, strict=True)
     ]
-    hot_nights = consecutive_hot_nights(days, normals)
+    hot_nights = consecutive_hot_nights(days, normals, load_alert_rules()["track2"]["hot_night_min_tmin_c"])
     results = []
     labels = [item.condition for item in conditions]
     for index, day in enumerate(days):

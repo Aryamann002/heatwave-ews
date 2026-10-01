@@ -27,6 +27,10 @@ class ClimatologyTest(unittest.TestCase):
         normals = [(0.0, 0.0, 30.0)] * 5 + [None]
         self.assertEqual(consecutive_hot_nights(days, normals), [1, 2, 0, 1, 2, 0])
 
+    def test_mild_nights_in_cold_districts_are_not_hot_nights(self) -> None:
+        days = [{"tmin_c": 7.5}] * 3  # Leh: above its own p90 Tmin, far below the floor
+        self.assertEqual(consecutive_hot_nights(days, [(17.0, 20.0, 6.0)] * 3), [0, 0, 0])
+
 
     def test_last_days_of_a_heat_spell_keep_their_persistence(self) -> None:
         # Plains, normal 40 C: three severe days (> +6.4 C) then a normal day.

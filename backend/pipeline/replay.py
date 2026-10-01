@@ -6,12 +6,14 @@ evaluate_days. The computed result is cached to disk so a replay works without n
 """
 
 import json
+from datetime import date
 import math
 import os
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
+from app.alerts import load_alert_rules
 from pipeline.climatology import load_normals
 from pipeline.operational import evaluate_days, harmonise_district_forecast
 from pipeline.s1_fetch import HOURLY_FIELDS, fetch_bytes, load_districts
@@ -51,25 +53,10 @@ def _number(value: Any) -> float | None:
     return None if value is None or (isinstance(value, float) and math.isnan(value)) else float(value)
 
 
-def run_replay(scenario_id: str, cache_dir: str | Path = "data/replay") -> dict[str, Any]:
-    """Return the scenario's per-district, per-day indices and alerts (cached after first run)."""
-    document = load_scenarios()
-    scenario = next((item for item in document["scenarios"] if item["id"] == scenario_id), None)
-    if scenario is None:
-        raise KeyError(scenario_id)
-    cache = Path(cache_dir) / f"{scenario_id}.json"
-    districts = load_districts()
-    if cache.exists():
-        cached = json.loads(cache.read_text(encoding="utf-8"))
-        # Reuse only if it covers the configured districts (the district list may have grown).
-        if {row["district_id"] for row in cached["items"]} == {district["id"] for district in districts}:
-            return cached
-
-    database_url = os.environ["DATABASE_URL"]
+def _score(district_days: list[tuple[dict[str, Any], list[dict[str, Any]]]], database_url: str) -> list[dict[str, Any]]:
+    """Apply the current normals and alert rules to each district's daily values."""
     items = []
-    hourly = _fetch_hourly(districts, scenario["start"], scenario["end"])
-    for district, document_hourly in zip(districts, hourly, strict=True):
-        days = harmonise_district_forecast(document_hourly, district["latitude"], district["longitude"])
+    for district, days in district_days:
         climatology = load_normals(database_url, district["id"])
         normals = [climatology.get(day["date"].timetuple().tm_yday) for day in days]
         for day, normal, (condition, track1, track2, combined) in zip(
@@ -96,6 +83,41 @@ def run_replay(scenario_id: str, cache_dir: str | Path = "data/replay") -> dict[
                     "heat_index_c": _number(day["heat_index_c"]),
                 }
             )
+    return items
+
+
+def run_replay(scenario_id: str, cache_dir: str | Path = "data/replay") -> dict[str, Any]:
+    """Return the scenario's per-district, per-day indices and alerts (cached after first run)."""
+    document = load_scenarios()
+    scenario = next((item for item in document["scenarios"] if item["id"] == scenario_id), None)
+    if scenario is None:
+        raise KeyError(scenario_id)
+    cache = Path(cache_dir) / f"{scenario_id}.json"
+    districts = load_districts()
+    database_url = os.environ["DATABASE_URL"]
+    if cache.exists():
+        cached = json.loads(cache.read_text(encoding="utf-8"))
+        # Reuse only if it covers the configured districts (the district list may have grown).
+        if {row["district_id"] for row in cached["items"]} == {district["id"] for district in districts}:
+            if all(row["rule_version"] == load_alert_rules()["version"] for row in cached["items"]):
+                return cached
+            # Rules changed: re-score the cached daily values; no need to download the weather again.
+            by_district: dict[str, list[dict[str, Any]]] = {}
+            for row in cached["items"]:
+                by_district.setdefault(row["district_id"], []).append({**row, "date": date.fromisoformat(row["date"])})
+            items = _score([(district, by_district[district["id"]]) for district in districts], database_url)
+            cached["items"] = items
+            cache.write_text(json.dumps(cached), encoding="utf-8")
+            return cached
+
+    hourly = _fetch_hourly(districts, scenario["start"], scenario["end"])
+    items = _score(
+        [
+            (district, harmonise_district_forecast(document_hourly, district["latitude"], district["longitude"]))
+            for district, document_hourly in zip(districts, hourly, strict=True)
+        ],
+        database_url,
+    )
     result = {
         **scenario,
         "mode": "replay",

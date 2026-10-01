@@ -39,6 +39,7 @@ STATE_NAMES = {
     "Orissa": "Odisha", "Arunanchal Pradesh": "Arunachal Pradesh", "Andaman & Nicobar Island": "Andaman and Nicobar Islands",
     "Dadara & Nagar Havelli": "Dadra and Nagar Haveli", "Daman & Diu": "Daman and Diu", "Delhi & NCR": "Delhi",
 }
+NAME_FIXES = {"Y.s.r.": "YSR Kadapa", "Janjgir-champa": "Janjgir-Champa", "Kaimur (bhabua)": "Kaimur (Bhabua)", "Sant Ravi Das Nagar(bhadohi)": "Sant Ravi Das Nagar (Bhadohi)", "Saraikela-kharsawan": "Saraikela-Kharsawan", "Saran (chhapra)": "Saran (Chhapra)"}  # Census 2011 casing slips
 TELANGANA_CODES = {(28, code) for code in range(1, 11)}  # Adilabad ... Khammam, Census 2011
 
 
@@ -119,7 +120,7 @@ def main() -> None:
             continue
         state = " ".join(props["ST_NM"].split())
         state = "Telangana" if code in TELANGANA_CODES else STATE_NAMES.get(state, state)
-        name = props["DISTRICT"].strip()
+        name = NAME_FIXES.get(props["DISTRICT"].strip(), props["DISTRICT"].strip())
         district_id = slug(name)
         if district_id in used_ids:  # e.g. Aurangabad (Bihar and Maharashtra)
             district_id = f"{district_id}-{slug(state)}"

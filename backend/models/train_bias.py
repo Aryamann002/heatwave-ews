@@ -63,9 +63,11 @@ def _daily_tmax(kind: str, district: dict[str, Any], cache_dir: Path) -> dict[st
     return {day: value for day, value in zip(daily["time"], daily["temperature_2m_max"]) if value is not None}
 
 
-def build_samples(cache_dir: Path = Path("data/raw/bias_training")) -> list[BiasSample]:
+def build_samples(cache_dir: Path = Path("data/raw/bias_training"), *, cached_only: bool = False) -> list[BiasSample]:
     samples = []
     for district in load_districts():
+        if cached_only and not all((cache_dir / kind / f"{district['id']}.json").exists() for kind in SOURCES):
+            continue  # never fetch: used by evaluation scripts that must not hit the network
         raw = _daily_tmax("forecast", district, cache_dir)
         observed = _daily_tmax("era5", district, cache_dir)
         for day in sorted(raw.keys() & observed.keys()):
@@ -94,7 +96,7 @@ def load_correctors(card_path: Path = CARD_PATH) -> dict[str, BiasCorrector]:
 
 
 def main() -> None:
-    samples = build_samples()
+    samples = build_samples(cached_only=True)
     identical = sum(abs(s.raw_temperature_c - s.observed_temperature_c) < 1e-9 for s in samples)
     if identical > 0.5 * len(samples):
         raise SystemExit(

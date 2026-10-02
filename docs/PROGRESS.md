@@ -96,3 +96,11 @@
 - **Fetching:** forecast and replay requests batch 50 locations; shared `fetch_bytes` retries dropped connections, 429 and 5xx.
 - **Replays:** recomputed for 641 districts (28 May 2024: 126 red).
 - **Hot-night floor (approved):** a hot night now needs Tmin ≥ 25 °C as well as ≥ the district p90 Tmin (rules `heatwatch-rules-2026-10-01`). Without it, 168 replay district-days were escalated on nights below 25 °C (e.g. Leh orange at 7.5 °C). Replays are re-scored from cached daily values when the rule version changes. Verified: Leh and Kargil green on 28 May 2024; red counts unchanged.
+
+## 2026-10-02 — event-skill check
+
+- **Added:** `backend/models/eval_events.py` scores single-day IMD heatwave detection from raw vs out-of-fold bias-corrected IFS Tmax against an ERA5-derived label (lead day 1, 2024–2025). Output: `data/evaluation/event_skill.json`.
+- **Result:** correction raised POD and CSI in all zones but also raised FAR (see LIMITATIONS #64). Skill of the LightGBM event classifier is still not established: it needs at least three years and only two exist.
+- **Fix:** `build_samples(cached_only=True)` stops evaluation scripts from fetching uncached districts.
+- **Tests:** 81 pass in Docker (added `test_eval_events.py`: event label rule, and `cached_only` never calls the network). The host port 5432 was held by another project, so tests ran with the Postgres host port mapping removed.
+- **Retrained:** bias correctors retrained on the 140 cached districts (96,022 samples, was 56,538 for 81 districts); `train_bias` now uses cached data only. Held-out MAE raw → corrected: coastal 0.70→0.58 °C, hills 0.94→0.73, plains 0.63→0.54. Still 2024–2025, lead day 1, against ERA5. The ~500 uncached districts still extrapolate from other districts' zone models.

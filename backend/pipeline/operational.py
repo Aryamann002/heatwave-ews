@@ -9,12 +9,14 @@ from pathlib import Path
 from typing import Any
 
 import psycopg
+import numpy as np
 
 from app.alerts import classify_track1_day, combine_tracks, evaluate_track1, evaluate_track2, load_alert_rules
 from app.repository import ensure_operational_tables
 from app.districts import seed_districts
 from indices.heat_index import calculate_heat_index
-from indices.utci import calculate_utci
+from indices.composite import calculate_htsi, load_weights
+from indices.utci import calculate_outdoor_mrt_series, calculate_utci
 from indices.wbgt_est import calculate_wbgt_est
 from models.baselines import raw_forecast_imd_baseline
 from models.train_bias import features as bias_features, load_correctors
@@ -59,7 +61,7 @@ def solar_zenith_cosine(timestamp: datetime, latitude: float, longitude: float) 
 def harmonise_district_forecast(
     document: dict[str, Any], latitude: float, longitude: float
 ) -> list[dict[str, Any]]:
-    """QC hourly Open-Meteo SI fields and aggregate hottest-hour daily indices."""
+    """QC hourly SI fields and aggregate peak daily stress plus exposure duration."""
     hourly = document.get("hourly", {})
     required = ("time", *HOURLY_FIELDS)
     if any(name not in hourly for name in required):
@@ -89,12 +91,33 @@ def harmonise_district_forecast(
         temperature = float(hourly["temperature_2m"][hottest])
         humidity = float(hourly["relative_humidity_2m"][hottest])
         wind = float(hourly["wind_speed_10m"][hottest])
-        shortwave = float(hourly["shortwave_radiation"][hottest])
-        direct = float(hourly["direct_radiation"][hottest])
-        if direct > shortwave and shortwave > 0:
+        temperatures = np.asarray([hourly["temperature_2m"][index] for index in indexes], dtype=float)
+        humidities = np.asarray([hourly["relative_humidity_2m"][index] for index in indexes], dtype=float)
+        winds = np.asarray([hourly["wind_speed_10m"][index] for index in indexes], dtype=float)
+        pressures = np.asarray([hourly["surface_pressure"][index] for index in indexes], dtype=float)
+        shortwave = np.asarray([hourly["shortwave_radiation"][index] for index in indexes], dtype=float)
+        direct = np.asarray([hourly["direct_radiation"][index] for index in indexes], dtype=float)
+        if np.any((direct > shortwave) & (shortwave > 0)):
             raise ValueError("direct radiation exceeds global shortwave radiation")
-        direct_fraction = direct / shortwave if shortwave else 0.0
-        cosine = solar_zenith_cosine(timestamps[hottest], latitude, longitude)
+        direct_fraction = np.divide(direct, shortwave, out=np.zeros_like(direct), where=shortwave > 0)
+        cosines = np.asarray(
+            [solar_zenith_cosine(timestamps[index], latitude, longitude) for index in indexes],
+            dtype=float,
+        )
+        mrt = calculate_outdoor_mrt_series(temperatures, direct, cosines)
+        shade_utci = np.asarray(calculate_utci(temperatures, temperatures, np.maximum(winds, 0.5), humidities), dtype=float)
+        sun_utci = np.asarray(calculate_utci(temperatures, mrt, np.maximum(winds, 0.5), humidities), dtype=float)
+        wbgt_values = np.asarray(
+            calculate_wbgt_est(temperatures, humidities, pressures, winds, shortwave, direct_fraction, cosines),
+            dtype=float,
+        )
+        heat_index_values = np.full_like(temperatures, np.nan)
+        heat_mask = temperatures >= 27.0
+        if np.any(heat_mask):
+            heat_index_values[heat_mask] = calculate_heat_index(temperatures[heat_mask], humidities[heat_mask])
+        if not np.any(np.isfinite(sun_utci)) or not np.any(np.isfinite(shade_utci)):
+            raise ValueError("UTCI failed its hourly applicability checks")
+        peak_sun_index = int(np.nanargmax(sun_utci))
         days.append(
             {
                 "date": forecast_date,
@@ -102,18 +125,13 @@ def harmonise_district_forecast(
                 "tmin_c": min(float(hourly["temperature_2m"][index]) for index in indexes),
                 "relative_humidity_pct": humidity,
                 "wind_speed_m_s": wind,
-                # Phase 1 UTCI is explicitly a shade estimate (MRT = air temperature).
-                "utci_c": calculate_utci(temperature, temperature, max(wind, 0.5), humidity),
-                "wbgt_est_c": calculate_wbgt_est(
-                    temperature,
-                    humidity,
-                    float(hourly["surface_pressure"][hottest]),
-                    wind,
-                    shortwave,
-                    direct_fraction,
-                    cosine,
-                ),
-                "heat_index_c": calculate_heat_index(temperature, humidity),
+                "utci_c": float(np.nanmax(sun_utci)),
+                "utci_sun_c": float(np.nanmax(sun_utci)),
+                "utci_shade_c": float(np.nanmax(shade_utci)),
+                "peak_stress_time": timestamps[indexes[peak_sun_index]],
+                "stress_hours": int(np.count_nonzero(sun_utci >= 32.0)),
+                "wbgt_est_c": float(np.nanmax(wbgt_values)),
+                "heat_index_c": float(np.nanmax(heat_index_values)) if np.any(np.isfinite(heat_index_values)) else math.nan,
             }
         )
     return days
@@ -140,6 +158,7 @@ def evaluate_days(
         for day, normal in zip(days, normals, strict=True)
     ]
     hot_nights = consecutive_hot_nights(days, normals, load_alert_rules()["track2"]["hot_night_min_tmin_c"])
+    weights = load_weights()
     results = []
     labels = [item.condition for item in conditions]
     for index, day in enumerate(days):
@@ -148,6 +167,15 @@ def evaluate_days(
         start = index
         while start > 0 and labels[start - 1] != "normal" and labels[index] != "normal":
             start -= 1
+        day["hot_night_count"] = hot_nights[index]
+        day["htsi"] = calculate_htsi(
+            max(0.0, min(1.0, (day["utci_c"] - 26.0) / 20.0)),
+            max(0.0, min(1.0, (day["wbgt_est_c"] - 25.0) / 7.0)),
+            min(1.0, hot_nights[index] / 3.0),
+            min(1.0, day.get("stress_hours", 0) / 8.0),
+            0.0,
+            weights,
+        )
         track1 = evaluate_track1(labels[start:])
         track2 = evaluate_track2(day["utci_c"], day["wbgt_est_c"], hot_nights[index], None)
         results.append((conditions[index], track1, track2, combine_tracks(track1.level, track2.level)))
@@ -247,18 +275,30 @@ def run_operational(
                 )
                 cursor.execute(
                     """
-                    INSERT INTO thermal_indices VALUES (%s,%s,%s,%s,%s,%s)
+                    INSERT INTO thermal_indices
+                        (district_id, forecast_date, run_id, utci_c, wbgt_est_c,
+                         heat_index_c, utci_shade_c, utci_sun_c, stress_hours, htsi)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     ON CONFLICT (district_id, forecast_date, run_id) DO UPDATE SET
                         utci_c=EXCLUDED.utci_c, wbgt_est_c=EXCLUDED.wbgt_est_c,
-                        heat_index_c=EXCLUDED.heat_index_c
+                        heat_index_c=EXCLUDED.heat_index_c,
+                        utci_shade_c=EXCLUDED.utci_shade_c,
+                        utci_sun_c=EXCLUDED.utci_sun_c,
+                        stress_hours=EXCLUDED.stress_hours,
+                        htsi=EXCLUDED.htsi
                     """,
                     (
                         district_id, day["date"], manifest["run_id"], day["utci_c"],
-                        day["wbgt_est_c"], heat_index,
+                        day["wbgt_est_c"], heat_index, day["utci_shade_c"],
+                        day["utci_sun_c"], day["stress_hours"], day["htsi"],
                     ),
                 )
                 reasoning = (
                     condition.reasons + track1.reasons + track2.reasons + combined.reasons
+                    + (
+                        f"utci_sun_peak={day['utci_sun_c']:.1f}C; shade_peak={day['utci_shade_c']:.1f}C; "
+                        f"strong_stress_hours={day['stress_hours']}; htsi={day['htsi']:.3f} (assumption weights)",
+                    )
                     + ((f"raw_forecast_tmax={day['raw_tmax_c']:.1f}C (bias-corrected to ERA5)",) if corrector else ())
                 )
                 cursor.execute(
@@ -277,6 +317,7 @@ def run_operational(
                         json.dumps({
                             "forecast": f"open-meteo:{FORECAST_MODEL}",
                             "tmax_bias_correction": "lightgbm-per-zone" if corrector else "none",
+                            "utci_exposure": "pythermalcomfort-4.6.0+ashrae55-solar-gain",
                             "classifier": "not_available",
                         }),
                         datetime.now(UTC),

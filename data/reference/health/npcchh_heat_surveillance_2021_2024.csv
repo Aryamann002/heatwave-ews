@@ -1,0 +1,9 @@
+source_id,geography_level,geography_name,year,period_end,outcome_type,count,count_status,operational_training,note
+npcchh-heat-surveillance-2021-2024,nation,India,2021,2021-07-31,suspected_heat_illness_cases,65,reported,false,March 1 to July 31 surveillance period; 2024 data through July 28
+npcchh-heat-surveillance-2021-2024,nation,India,2021,2021-07-31,confirmed_heatstroke_deaths,,not_reported,false,March 1 to July 31 surveillance period; 2024 data through July 28
+npcchh-heat-surveillance-2021-2024,nation,India,2022,2022-07-31,suspected_heat_illness_cases,4481,reported,false,March 1 to July 31 surveillance period; 2024 data through July 28
+npcchh-heat-surveillance-2021-2024,nation,India,2022,2022-07-31,confirmed_heatstroke_deaths,33,reported,false,March 1 to July 31 surveillance period; 2024 data through July 28
+npcchh-heat-surveillance-2021-2024,nation,India,2023,2023-07-31,suspected_heat_illness_cases,19402,reported,false,March 1 to July 31 surveillance period; 2024 data through July 28
+npcchh-heat-surveillance-2021-2024,nation,India,2023,2023-07-31,confirmed_heatstroke_deaths,189,reported,false,March 1 to July 31 surveillance period; 2024 data through July 28
+npcchh-heat-surveillance-2021-2024,nation,India,2024,2024-07-28,suspected_heat_illness_cases,48385,reported,false,March 1 to July 31 surveillance period; 2024 data through July 28
+npcchh-heat-surveillance-2021-2024,nation,India,2024,2024-07-28,confirmed_heatstroke_deaths,185,reported,false,March 1 to July 31 surveillance period; 2024 data through July 28

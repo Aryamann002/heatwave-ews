@@ -15,6 +15,9 @@ data/*
 !data/raw/
 data/raw/*
 !data/raw/bias_training/
+!data/reference/
+!data/reference/health/
+!data/reference/health/**
 
 *.bak
 .claude-flow/

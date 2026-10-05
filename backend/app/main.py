@@ -5,26 +5,46 @@ import os
 import uuid
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import psycopg
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.advisories import IST, AdvisoryDraft, draft_advisory, lint_advisory
+from app.auth import SessionIdentity, auth_mode, issue_session, public_auth_config, read_session, verify_password
 from app.districts import seed_districts
 from app.nl_query import QueryResult, process_nl_query
 from app.repository import data_status, ensure_operational_tables, fetch_rows
+from indices.composite import load_weights
+from models.health_data import HealthObservationBatch
+from models.health_impact import load_health_impact_config, relative_risk_sensitivity
+from models.ward_impact import response_priority
+from pipeline.open_health_data import load_manifest, seed_open_health_reference
 
 
 class SMSDispatchRequest(BaseModel):
     phone_numbers: list[str]
+    idempotency_key: str = Field(min_length=8, max_length=160)
 
 
 class EmailDispatchRequest(BaseModel):
     email_addresses: list[str]
+    idempotency_key: str = Field(min_length=8, max_length=160)
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=2, max_length=80)
+    password: str = Field(min_length=4, max_length=200)
+
+
+class MunicipalTriggerRequest(BaseModel):
+    idempotency_key: str = Field(min_length=8, max_length=160)
+    action_types: list[str] = Field(default_factory=list, max_length=10)
 
 
 @asynccontextmanager
@@ -33,6 +53,7 @@ async def lifespan(_: FastAPI):
     database_url = os.environ["DATABASE_URL"]
     seed_districts(database_url)
     ensure_operational_tables(database_url)
+    seed_open_health_reference(database_url)
     # Seed default users
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
         cursor.execute(
@@ -56,15 +77,82 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+_bearer = HTTPBearer(auto_error=False)
+
 
 def _database_url() -> str:
     return os.environ["DATABASE_URL"]
+
+
+def _current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> SessionIdentity:
+    """Return the signed-in database user and reject forged/stale identities."""
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Sign in before performing operational actions")
+    try:
+        identity = read_session(credentials.credentials)
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=401, detail=str(error)) from error
+    rows = fetch_rows(
+        _database_url(),
+        "SELECT user_id, username, role FROM users WHERE user_id = %s",
+        (identity.user_id,),
+    )
+    if not rows or rows[0]["username"] != identity.username or rows[0]["role"] != identity.role:
+        raise HTTPException(status_code=401, detail="Session identity no longer matches an active user")
+    return identity
+
+
+def require_roles(*roles: str):
+    """FastAPI dependency factory for role-based authorization."""
+    def dependency(identity: SessionIdentity = Depends(_current_user)) -> SessionIdentity:
+        if identity.role not in roles:
+            raise HTTPException(status_code=403, detail=f"This action requires one of these roles: {', '.join(roles)}")
+        return identity
+
+    return dependency
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
     """Return service health without checking forecast freshness."""
     return {"status": "ok"}
+
+
+@app.get("/auth/config")
+def get_auth_config() -> dict[str, Any]:
+    """Return public authentication mode and deployment guidance."""
+    try:
+        return public_auth_config()
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
+
+@app.post("/auth/login")
+def login(request: LoginRequest) -> dict[str, Any]:
+    """Exchange environment-backed credentials for a signed eight-hour session."""
+    try:
+        valid = verify_password(request.username, request.password)
+    except (RuntimeError, json.JSONDecodeError) as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    if not valid:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    rows = fetch_rows(
+        _database_url(),
+        "SELECT user_id, username, role FROM users WHERE username = %s",
+        (request.username,),
+    )
+    if not rows:
+        raise HTTPException(status_code=403, detail="Authenticated account is not provisioned in this deployment")
+    identity = SessionIdentity(**rows[0])
+    return {"token": issue_session(identity), "expires_in_seconds": 8 * 60 * 60, "user": rows[0]}
+
+
+@app.get("/auth/session")
+def session(identity: SessionIdentity = Depends(_current_user)) -> dict[str, Any]:
+    """Return the current authenticated identity."""
+    return {"user_id": identity.user_id, "username": identity.username, "role": identity.role}
 
 
 @app.get("/model-card")
@@ -130,7 +218,8 @@ def get_indices(district_id: str) -> dict[str, Any]:
     rows = fetch_rows(
         _database_url(),
         """
-        SELECT forecast_date AS date, utci_c, wbgt_est_c, heat_index_c, run_id
+        SELECT forecast_date AS date, utci_c, utci_shade_c, utci_sun_c,
+               stress_hours, htsi, wbgt_est_c, heat_index_c, run_id
         FROM thermal_indices WHERE district_id = %s
           AND run_id = (SELECT run_id FROM model_runs ORDER BY init_time DESC LIMIT 1)
         ORDER BY forecast_date
@@ -149,7 +238,8 @@ def get_overview() -> dict[str, Any]:
         """
         SELECT a.district_id, a.forecast_date AS date, a.level, a.track1_level, a.track2_level,
                f.tmax_c, f.tmax_c - c.normal_tmax_c AS departure_c,
-               t.utci_c, t.wbgt_est_c, t.heat_index_c
+               t.utci_c, t.utci_shade_c, t.utci_sun_c, t.stress_hours,
+               t.htsi, t.wbgt_est_c, t.heat_index_c
         FROM alerts a
         JOIN forecast_daily f USING (district_id, forecast_date, run_id)
         JOIN thermal_indices t USING (district_id, forecast_date, run_id)
@@ -217,6 +307,305 @@ def get_vulnerability(district_id: str) -> dict[str, Any]:
     }
 
 
+@app.get("/ward-outlook/{district_id}")
+def get_ward_outlook(district_id: str, forecast_date: str) -> dict[str, Any]:
+    """Rank ward response review using district hazard plus ward population exposure.
+
+    The endpoint explicitly does not claim ward-resolution meteorology.
+    """
+    status = data_status(_database_url())
+    if status["state"] != "current":
+        raise HTTPException(status_code=409, detail=status["banner"])
+    alerts = fetch_rows(
+        _database_url(),
+        """
+        SELECT level, run_id FROM alerts WHERE district_id = %s AND forecast_date = %s
+          AND run_id = (SELECT run_id FROM model_runs ORDER BY init_time DESC LIMIT 1)
+        """,
+        (district_id, forecast_date),
+    )
+    if not alerts:
+        raise HTTPException(status_code=404, detail="No district alert exists for this date")
+    rows = fetch_rows(
+        _database_url(),
+        """
+        SELECT ward_id, name, population_estimate, data_vintage, source_url, licence,
+               ROW_NUMBER() OVER (ORDER BY population_estimate DESC, name, ward_id)::integer AS rank,
+               COUNT(*) OVER ()::integer AS ward_count,
+               ST_AsGeoJSON(geom, 5)::json AS geometry
+        FROM vulnerability_wards WHERE district_id = %s
+        ORDER BY rank
+        """,
+        (district_id,),
+    )
+    level = alerts[0]["level"]
+    items = []
+    for row in rows:
+        result = response_priority(level, row["rank"], row["ward_count"])
+        items.append({
+            **row,
+            "district_alert_level": level,
+            "exposure_percentile": result.exposure_percentile,
+            "response_priority_score": result.priority_score,
+            "response_priority": result.priority,
+        })
+    return {
+        "district_id": district_id,
+        "forecast_date": forecast_date,
+        "run_id": alerts[0]["run_id"],
+        "status": "available" if items else "unavailable",
+        "meteorology_resolution": "district point from ECMWF IFS 0.25 degree forecast",
+        "ward_meteorology_downscaled": False,
+        "basis": "District alert (75%) plus within-district population-exposure percentile (25%). Operational review queue only; not a ward weather forecast or health prediction.",
+        "items": items,
+    }
+
+
+@app.get("/health-data/status")
+def health_data_status() -> dict[str, Any]:
+    """Report whether approved aggregated health outcomes are connected."""
+    rows = fetch_rows(
+        _database_url(),
+        """
+        SELECT COUNT(*)::integer AS rows, COUNT(DISTINCT ward_id)::integer AS wards,
+               MIN(observation_date) AS first_date, MAX(observation_date) AS last_date,
+               ARRAY_AGG(DISTINCT outcome_type) AS outcomes,
+               ARRAY_AGG(DISTINCT source_name) AS sources
+        FROM health_observations
+        """,
+    )
+    summary = rows[0]
+    connected = summary["rows"] > 0
+    return {
+        "status": "connected" if connected else "awaiting_approved_data",
+        "operational_health_model": False,
+        "absolute_outcome_forecast_enabled": False,
+        "message": (
+            "Aggregated ward-day health outcomes are connected; temporal validation is still required before outcome forecasts can be enabled."
+            if connected
+            else "No approved mortality or hospital-admission dataset is connected. The system does not fabricate outcome forecasts."
+        ),
+        **summary,
+    }
+
+
+@app.get("/health-reference/status")
+def health_reference_status() -> dict[str, Any]:
+    """Describe imported public context and its strict non-operational boundary."""
+    demographics = fetch_rows(
+        _database_url(),
+        "SELECT COUNT(*)::integer AS rows, MIN(elderly_share) AS min_elderly_share, MAX(elderly_share) AS max_elderly_share FROM district_demographics",
+    )[0]
+    outcomes = fetch_rows(
+        _database_url(),
+        """
+        SELECT COUNT(*)::integer AS rows, COUNT(DISTINCT source_id)::integer AS sources,
+               MIN(year)::integer AS first_year, MAX(year)::integer AS last_year,
+               BOOL_OR(operational_training) AS any_operational_training
+        FROM health_reference_observations
+        """,
+    )[0]
+    manifest = load_manifest()
+    return {
+        "status": "available" if demographics["rows"] and outcomes["rows"] else "unavailable",
+        "usage": "demographic and historical context only",
+        "operational_training": False,
+        "warning": "Annual national/state aggregates cannot train or validate a ward-day mortality or admission model.",
+        "district_demographics": demographics,
+        "outcome_references": outcomes,
+        "sources": [{
+            "source_id": source["source_id"], "title": source["title"],
+            "publisher": source["publisher"], "catalog_url": source["catalog_url"],
+            "licence": source["licence"],
+        } for source in manifest["sources"]],
+        "attribution_notice": manifest["sources"][0]["attribution_notice"],
+    }
+
+
+@app.get("/demographics/{district_id}")
+def get_demographics(district_id: str) -> dict[str, Any]:
+    """Return Census-2011 elderly context for a mapped district."""
+    rows = fetch_rows(
+        _database_url(),
+        """
+        SELECT d.district_id, x.name AS district_name, x.state, d.total_population,
+               d.elderly_60_plus, d.elderly_share, d.data_vintage, d.source_id
+        FROM district_demographics d JOIN districts x ON x.id=d.district_id
+        WHERE d.district_id=%s
+        """,
+        (district_id,),
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="No Census demographic reference for this district")
+    return {
+        **rows[0],
+        "operational_alert_input": False,
+        "warning": "Census 2011 age structure is stale context and does not change the alert colour.",
+    }
+
+
+@app.get("/health-reference/outcomes")
+def get_health_reference_outcomes(
+    source_id: str | None = None,
+    geography_name: str | None = None,
+) -> dict[str, Any]:
+    """Return public annual reference rows with optional exact-match filters."""
+    rows = fetch_rows(
+        _database_url(),
+        """
+        SELECT source_id, geography_level, geography_name, year, period_end,
+               outcome_type, count, count_status, operational_training, note
+        FROM health_reference_observations
+        WHERE (%s::text IS NULL OR source_id=%s)
+          AND (%s::text IS NULL OR geography_name=%s)
+        ORDER BY source_id, geography_level, geography_name, year, outcome_type
+        """,
+        (source_id, source_id, geography_name, geography_name),
+    )
+    return {
+        "usage": "historical context only",
+        "operational_training": False,
+        "items": rows,
+    }
+
+
+@app.get("/health-impact/{district_id}")
+def get_health_impact(district_id: str, forecast_date: str) -> dict[str, Any]:
+    """Return a non-operational relative-risk index and sensitivity scenario.
+
+    This output never predicts counts and never participates in alert selection.
+    """
+    status = data_status(_database_url())
+    if status["state"] != "current":
+        raise HTTPException(status_code=409, detail=status["banner"])
+    indices = fetch_rows(
+        _database_url(),
+        """
+        SELECT htsi, stress_hours, utci_sun_c, utci_shade_c, run_id
+        FROM thermal_indices WHERE district_id=%s AND forecast_date=%s
+          AND run_id=(SELECT run_id FROM model_runs ORDER BY init_time DESC LIMIT 1)
+        """,
+        (district_id, forecast_date),
+    )
+    if not indices or indices[0]["htsi"] is None:
+        raise HTTPException(status_code=409, detail="Run the radiation-aware pipeline before requesting health impact")
+    wards = fetch_rows(
+        _database_url(),
+        """
+        SELECT ward_id, name, population_estimate,
+               ROW_NUMBER() OVER (ORDER BY population_estimate DESC, name, ward_id)::integer AS rank,
+               COUNT(*) OVER ()::integer AS ward_count
+        FROM vulnerability_wards WHERE district_id=%s ORDER BY rank
+        """,
+        (district_id,),
+    )
+    config = load_health_impact_config()
+    vulnerability_weight = load_weights()["vulnerability"]
+    thermal_htsi = float(indices[0]["htsi"])
+    items = []
+    for ward in wards:
+        exposure = response_priority("green", ward["rank"], ward["ward_count"]).exposure_percentile
+        score = min(1.0, thermal_htsi * (1 + vulnerability_weight * exposure) / (1 + vulnerability_weight))
+        items.append({
+            **ward,
+            "population_exposure_percentile": exposure,
+            "normalised_stress_score": round(score, 3),
+            **relative_risk_sensitivity(score, config),
+        })
+    items.sort(key=lambda item: item["relative_risk_index"], reverse=True)
+    health = health_data_status()
+    return {
+        "district_id": district_id,
+        "forecast_date": forecast_date,
+        "status": "illustrative_not_fitted" if health["status"] != "connected" else "local_data_connected_validation_pending",
+        "operational_alert_input": False,
+        "absolute_count_prediction": False,
+        "label": "Illustrative relative heat-health risk index",
+        "warning": "This is an evidence-anchored scenario, not a mortality forecast or confidence interval. Do not use it to predict deaths or admissions.",
+        "method": config,
+        "thermal_context": indices[0],
+        "items": items,
+    }
+
+
+@app.post("/health-data/import")
+def import_health_data(
+    batch: HealthObservationBatch,
+    actor: SessionIdentity = Depends(require_roles("admin")),
+) -> dict[str, Any]:
+    """Import approved, aggregated ward-day outcomes; raw person records are unsupported."""
+    with psycopg.connect(_database_url()) as connection, connection.cursor() as cursor:
+        cursor.executemany(
+            """
+            INSERT INTO health_observations
+                (ward_id, observation_date, outcome_type, count, source_name,
+                 source_vintage, aggregation_note, licence_or_agreement)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (ward_id, observation_date, outcome_type) DO UPDATE SET
+                count=EXCLUDED.count, source_name=EXCLUDED.source_name,
+                source_vintage=EXCLUDED.source_vintage,
+                aggregation_note=EXCLUDED.aggregation_note,
+                licence_or_agreement=EXCLUDED.licence_or_agreement,
+                imported_at=now()
+            """,
+            [
+                (
+                    item.ward_id, item.observation_date, item.outcome_type, item.count,
+                    item.source_name, item.source_vintage, item.aggregation_note,
+                    batch.licence_or_agreement,
+                )
+                for item in batch.observations
+            ],
+        )
+        cursor.execute(
+            """
+            INSERT INTO audit_log (audit_id, user_id, action, entity_type, entity_id, new_value)
+            VALUES (%s,%s,'health_data_import','health_observation_batch',%s,%s)
+            """,
+            (
+                str(uuid.uuid4()), actor.user_id, str(uuid.uuid4()),
+                psycopg.types.json.Jsonb({"rows": len(batch.observations)}),
+            ),
+        )
+    return {"status": "imported", "rows": len(batch.observations), "model_enabled": False}
+
+
+@app.get("/readiness")
+def product_readiness() -> dict[str, Any]:
+    """Return machine-readable evidence, provenance, and deployment gates."""
+    boundary = json.loads(Path("config/boundary_source.json").read_text(encoding="utf-8"))
+    vulnerability = json.loads(Path("config/vulnerability_source.json").read_text(encoding="utf-8"))
+    event_path = Path("data/evaluation/event_skill.json")
+    event = json.loads(event_path.read_text(encoding="utf-8")) if event_path.exists() else None
+    health = health_data_status()
+    reference = health_reference_status()
+    return {
+        "product_status": "decision_support_prototype",
+        "official_imd_product": False,
+        "auth": public_auth_config(),
+        "gates": [
+            {"id": "forecast", "label": "Live 7-day forecast and stale-data blocking", "status": "pass"},
+            {"id": "thermal", "label": "UTCI shade, estimated WBGT, Heat Index", "status": "pass"},
+            {"id": "ward", "label": "Ward response-priority pilots", "status": "partial", "detail": "Ahmedabad, New Delhi and Chennai; meteorology remains district-scale."},
+            {"id": "health", "label": "Health-outcome model", "status": "blocked" if health["status"] != "connected" else "partial", "detail": health["message"] + " Public annual reference data is available for context but is not sufficient for training."},
+            {"id": "validation", "label": "Lead-day event validation", "status": "partial", "detail": "The committed event evaluation currently covers lead day 1 and 2024-2025 only."},
+            {"id": "boundaries", "label": "Operational boundary approval", "status": "blocked", "detail": "Community Census 2011 boundaries must be replaced or formally accepted by the deploying authority."},
+            {"id": "delivery", "label": "Authenticated approval, CAP and idempotent adapters", "status": "partial", "detail": "CAP 1.2 is emitted in Test mode; India gateway profile and telecom credentials remain deployment integrations."},
+        ],
+        "provenance": [
+            {"layer": "Forecast", "source": "ECMWF IFS 0.25 degree via Open-Meteo", "kind": "forecast", "resolution": "district representative point"},
+            {"layer": "Climatology", "source": "ERA5 1991-2020", "kind": "reanalysis", "resolution": "district daily normals"},
+            {"layer": "District boundaries", "source": boundary["dataset"], "kind": "community boundary", "vintage": boundary["source_vintage"], "licence": boundary["license"]},
+            {"layer": "Ward exposure", "source": "DataMeet wards plus WorldPop 2020", "kind": "proxy", "resolution": "ward population sum", "licence": vulnerability["population"]["licence"]},
+            {"layer": "Health outcomes", "source": health.get("sources") or [], "kind": "approved aggregate only", "status": health["status"]},
+            {"layer": "Demographic context", "source": "Census of India 2011 C-14", "kind": "district age structure", "status": reference["status"], "operational_alert_input": False},
+            {"layer": "Historical heat-health context", "source": ["NPCCHH", "NCRB"], "kind": "annual national/state aggregates", "status": reference["status"], "operational_training": False},
+        ],
+        "event_evaluation_available": event is not None,
+        "event_evaluation": event,
+    }
+
+
 @app.get("/advisories/{district_id}")
 def get_advisories(district_id: str, forecast_date: str) -> dict[str, Any]:
     """Return advisory drafts for a district and forecast date."""
@@ -244,6 +633,7 @@ def create_advisory(
     district_id: str,
     forecast_date: str,
     language: str,
+    actor: SessionIdentity = Depends(require_roles("officer", "admin")),
 ) -> dict[str, Any]:
     """Generate an advisory draft from the approved template for a specific alert."""
     try:
@@ -341,7 +731,11 @@ LANGUAGE_NAME = {"gu": "Gujarati", "ta": "Tamil", "te": "Telugu", "mr": "Marathi
 
 
 @app.post("/advisories/{district_id}/regional")
-def create_regional_advisory(district_id: str, forecast_date: str) -> dict[str, Any]:
+def create_regional_advisory(
+    district_id: str,
+    forecast_date: str,
+    actor: SessionIdentity = Depends(require_roles("officer", "admin")),
+) -> dict[str, Any]:
     """Translate the approved-template English draft into the state's language via the LLM.
 
     The alert level and English text come from the deterministic path; the LLM only
@@ -364,7 +758,7 @@ def create_regional_advisory(district_id: str, forecast_date: str) -> dict[str, 
         """,
         (district_id, forecast_date),
     )
-    english = existing[0] if existing else create_advisory(district_id, forecast_date, "en")
+    english = existing[0] if existing else create_advisory(district_id, forecast_date, "en", actor)
     translated = chat(
         f"You translate official heat-wave advisories into {LANGUAGE_NAME[language]}. Translate faithfully. "
         "Keep every number, date, time, place name and the alert colour word's meaning. Add nothing. "
@@ -400,7 +794,9 @@ def create_regional_advisory(district_id: str, forecast_date: str) -> dict[str, 
 
 
 @app.get("/users")
-def get_users() -> dict[str, Any]:
+def get_users(
+    _: SessionIdentity = Depends(require_roles("admin")),
+) -> dict[str, Any]:
     """List all users with their roles."""
     rows = fetch_rows(
         _database_url(),
@@ -412,19 +808,11 @@ def get_users() -> dict[str, Any]:
 @app.patch("/advisories/{advisory_id}/approve")
 def approve_advisory(
     advisory_id: str,
-    user_id: str,
     action: str,  # "approve" or "reject"
+    actor: SessionIdentity = Depends(require_roles("officer", "admin")),
 ) -> dict[str, Any]:
     """Approve or reject an advisory draft. Requires officer or admin role."""
     with psycopg.connect(_database_url()) as connection, connection.cursor() as cursor:
-        # Verify user exists and has officer/admin role
-        cursor.execute("SELECT role FROM users WHERE user_id = %s", (user_id,))
-        user_row = cursor.fetchone()
-        if not user_row:
-            raise HTTPException(status_code=403, detail="user not found")
-        if user_row[0] not in ("officer", "admin"):
-            raise HTTPException(status_code=403, detail="only officers and admins can approve/reject advisories")
-
         # Fetch current advisory
         advisory_rows = fetch_rows(
             _database_url(),
@@ -455,7 +843,7 @@ def approve_advisory(
             SET status = %s, approved_by = %s, approved_at = %s
             WHERE advisory_id = %s
             """,
-            (new_status, user_id, now, advisory_id),
+            (new_status, actor.user_id, now, advisory_id),
         )
 
         # Log to audit
@@ -467,7 +855,7 @@ def approve_advisory(
             """,
             (
                 audit_id,
-                user_id,
+                actor.user_id,
                 f"advisory_{action}",
                 "advisory_draft",
                 advisory_id,
@@ -479,13 +867,16 @@ def approve_advisory(
     return {
         "advisory_id": advisory_id,
         "status": new_status,
-        "approved_by": user_id,
+        "approved_by": actor.user_id,
         "approved_at": now.isoformat(),
     }
 
 
 @app.get("/audit-log")
-def get_audit_log(limit: int = 100) -> dict[str, Any]:
+def get_audit_log(
+    limit: int = 100,
+    _: SessionIdentity = Depends(require_roles("officer", "admin")),
+) -> dict[str, Any]:
     """Return audit log entries."""
     rows = fetch_rows(
         _database_url(),
@@ -500,7 +891,11 @@ def get_audit_log(limit: int = 100) -> dict[str, Any]:
 
 
 @app.get("/tasks/{district_id}")
-def get_tasks(district_id: str, status_filter: str | None = None) -> dict[str, Any]:
+def get_tasks(
+    district_id: str,
+    status_filter: str | None = None,
+    _: SessionIdentity = Depends(require_roles("viewer", "officer", "admin")),
+) -> dict[str, Any]:
     """Return response tasks for a district, optionally filtered by status."""
     query = """
         SELECT task_id, district_id, alert_id, task_type, title, description,
@@ -530,7 +925,7 @@ def create_task(
     alert_id: str | None = None,
     ward_id: str | None = None,
     quantity: int | None = None,
-    user_id: str = "user-system-1",
+    actor: SessionIdentity = Depends(require_roles("officer", "admin")),
 ) -> dict[str, Any]:
     """Create a new response task, optionally allocating a resource quantity to a ward."""
     if task_type not in {"water_point", "cooling_centre", "ambulance_staging", "other"}:
@@ -577,7 +972,7 @@ def create_task(
             """,
             (
                 audit_id,
-                user_id,
+                actor.user_id,
                 "task_create",
                 "response_task",
                 task_id,
@@ -602,7 +997,7 @@ def update_task(
     priority: str | None = None,
     assigned_to: str | None = None,
     description: str | None = None,
-    user_id: str = "user-system-1",
+    actor: SessionIdentity = Depends(require_roles("officer", "admin")),
 ) -> dict[str, Any]:
     """Update a response task."""
     if status and status not in {"pending", "in_progress", "completed", "cancelled"}:
@@ -665,7 +1060,7 @@ def update_task(
             """,
             (
                 audit_id,
-                user_id,
+                actor.user_id,
                 "task_update",
                 "response_task",
                 task_id,
@@ -678,7 +1073,10 @@ def update_task(
 
 
 @app.delete("/tasks/{task_id}")
-def delete_task(task_id: str) -> dict[str, Any]:
+def delete_task(
+    task_id: str,
+    actor: SessionIdentity = Depends(require_roles("admin")),
+) -> dict[str, Any]:
     """Delete a response task."""
     with psycopg.connect(_database_url()) as connection, connection.cursor() as cursor:
         cursor.execute("SELECT * FROM response_tasks WHERE task_id = %s", (task_id,))
@@ -694,7 +1092,7 @@ def delete_task(task_id: str) -> dict[str, Any]:
             INSERT INTO audit_log (audit_id, user_id, action, entity_type, entity_id)
             VALUES (%s, %s, %s, %s, %s)
             """,
-            (audit_id, "user-system-1", "task_delete", "response_task", task_id),
+            (audit_id, actor.user_id, "task_delete", "response_task", task_id),
         )
 
     return {"task_id": task_id, "deleted": True}
@@ -753,7 +1151,10 @@ def suggest_allocation(district_id: str, forecast_date: str, top: int = 8) -> di
 
 
 @app.get("/advisories/{advisory_id}/cap")
-def export_advisory_cap(advisory_id: str) -> dict[str, Any]:
+def export_advisory_cap(
+    advisory_id: str,
+    _: SessionIdentity = Depends(require_roles("officer", "admin")),
+) -> dict[str, Any]:
     """Export an approved advisory as CAP 1.2 XML."""
     rows = fetch_rows(
         _database_url(),
@@ -774,16 +1175,16 @@ def export_advisory_cap(advisory_id: str) -> dict[str, Any]:
     # Map alert level to CAP severity
     severity_map = {"green": "Minor", "yellow": "Moderate", "orange": "Severe", "red": "Extreme"}
     urgency_map = {"green": "Past", "yellow": "Future", "orange": "Immediate", "red": "Immediate"}
-    certainty_map = {"green": "Observed", "yellow": "Likely", "orange": "Likely", "red": "Observed"}
+    certainty_map = {"green": "Possible", "yellow": "Likely", "orange": "Likely", "red": "Likely"}
 
     from xml.etree import ElementTree as ET
     from xml.dom import minidom
 
     alert = ET.Element("alert", xmlns="urn:oasis:names:tc:emergency:cap:1.2")
     ET.SubElement(alert, "identifier").text = advisory_id
-    ET.SubElement(alert, "sender").text = "heatwave-ews@gov.in"
-    ET.SubElement(alert, "sent").text = datetime.now(UTC).isoformat()
-    ET.SubElement(alert, "status").text = "Actual"
+    ET.SubElement(alert, "sender").text = os.environ.get("CAP_SENDER", "heatwatch-demo@example.invalid")
+    ET.SubElement(alert, "sent").text = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    ET.SubElement(alert, "status").text = os.environ.get("CAP_STATUS", "Test")
     ET.SubElement(alert, "msgType").text = "Alert"
     ET.SubElement(alert, "source").text = "Heatwave EWS"
     ET.SubElement(alert, "scope").text = "Public"
@@ -828,11 +1229,62 @@ def export_advisory_cap(advisory_id: str) -> dict[str, Any]:
     reparsed = minidom.parseString(rough)
     xml_str = reparsed.toprettyxml(indent="  ")
 
-    return {"advisory_id": advisory_id, "cap_xml": xml_str}
+    return {
+        "advisory_id": advisory_id,
+        "cap_xml": xml_str,
+        "profile": "OASIS CAP 1.2 core",
+        "integration_status": "India NDMA/IMD gateway profile review pending",
+    }
+
+
+def _record_dispatch_result(
+    advisory_id: str,
+    channel: str,
+    idempotency_key: str,
+    actor: SessionIdentity,
+    result: dict[str, Any],
+) -> tuple[dict[str, Any], bool]:
+    """Persist one delivery result and return the original on safe retries."""
+    with psycopg.connect(_database_url()) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO dispatch_log
+                (dispatch_id, advisory_id, channel, idempotency_key, actor_id, result)
+            VALUES (%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (advisory_id, channel, idempotency_key) DO NOTHING
+            RETURNING dispatch_id
+            """,
+            (
+                str(uuid.uuid4()), advisory_id, channel, idempotency_key,
+                actor.user_id, psycopg.types.json.Jsonb(result),
+            ),
+        )
+        inserted = cursor.fetchone() is not None
+        if not inserted:
+            cursor.execute(
+                "SELECT result FROM dispatch_log WHERE advisory_id=%s AND channel=%s AND idempotency_key=%s",
+                (advisory_id, channel, idempotency_key),
+            )
+            return cursor.fetchone()[0], True
+        cursor.execute(
+            """
+            INSERT INTO audit_log (audit_id, user_id, action, entity_type, entity_id, new_value)
+            VALUES (%s,%s,%s,'advisory_draft',%s,%s)
+            """,
+            (
+                str(uuid.uuid4()), actor.user_id, f"{channel}_dispatch", advisory_id,
+                psycopg.types.json.Jsonb({"idempotency_key": idempotency_key}),
+            ),
+        )
+    return result, False
 
 
 @app.post("/advisories/{advisory_id}/dispatch/sms")
-def dispatch_advisory_sms(advisory_id: str, request: SMSDispatchRequest) -> dict[str, Any]:
+def dispatch_advisory_sms(
+    advisory_id: str,
+    request: SMSDispatchRequest,
+    actor: SessionIdentity = Depends(require_roles("officer", "admin")),
+) -> dict[str, Any]:
     """Mock SMS dispatch for an approved advisory."""
     rows = fetch_rows(
         _database_url(),
@@ -863,29 +1315,17 @@ def dispatch_advisory_sms(advisory_id: str, request: SMSDispatchRequest) -> dict
             "sent_at": datetime.now(UTC).isoformat(),
         })
 
-    # Audit log
-    with psycopg.connect(_database_url()) as connection, connection.cursor() as cursor:
-        audit_id = str(uuid.uuid4())
-        cursor.execute(
-            """
-            INSERT INTO audit_log (audit_id, user_id, action, entity_type, entity_id, new_value)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            """,
-            (
-                audit_id,
-                "user-system-1",
-                "sms_dispatch",
-                "advisory_draft",
-                advisory_id,
-                psycopg.types.json.Jsonb({"recipients": len(request.phone_numbers)}),
-            ),
-        )
-
-    return {"advisory_id": advisory_id, "dispatched": dispatched, "total": len(dispatched)}
+    result = {"advisory_id": advisory_id, "dispatched": dispatched, "total": len(dispatched)}
+    stored, repeated = _record_dispatch_result(advisory_id, "sms", request.idempotency_key, actor, result)
+    return {**stored, "idempotent_replay": repeated}
 
 
 @app.post("/advisories/{advisory_id}/dispatch/email")
-def dispatch_advisory_email(advisory_id: str, request: EmailDispatchRequest) -> dict[str, Any]:
+def dispatch_advisory_email(
+    advisory_id: str,
+    request: EmailDispatchRequest,
+    actor: SessionIdentity = Depends(require_roles("officer", "admin")),
+) -> dict[str, Any]:
     """Mock email dispatch for an approved advisory."""
     rows = fetch_rows(
         _database_url(),
@@ -917,25 +1357,50 @@ def dispatch_advisory_email(advisory_id: str, request: EmailDispatchRequest) -> 
             "sent_at": datetime.now(UTC).isoformat(),
         })
 
-    # Audit log
-    with psycopg.connect(_database_url()) as connection, connection.cursor() as cursor:
-        audit_id = str(uuid.uuid4())
-        cursor.execute(
-            """
-            INSERT INTO audit_log (audit_id, user_id, action, entity_type, entity_id, new_value)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            """,
-            (
-                audit_id,
-                "user-system-1",
-                "email_dispatch",
-                "advisory_draft",
-                advisory_id,
-                psycopg.types.json.Jsonb({"recipients": len(request.email_addresses)}),
-            ),
-        )
+    result = {"advisory_id": advisory_id, "dispatched": dispatched, "total": len(dispatched)}
+    stored, repeated = _record_dispatch_result(advisory_id, "email", request.idempotency_key, actor, result)
+    return {**stored, "idempotent_replay": repeated}
 
-    return {"advisory_id": advisory_id, "dispatched": dispatched, "total": len(dispatched)}
+
+@app.post("/advisories/{advisory_id}/trigger/municipal")
+def create_municipal_trigger(
+    advisory_id: str,
+    request: MunicipalTriggerRequest,
+    actor: SessionIdentity = Depends(require_roles("officer", "admin")),
+) -> dict[str, Any]:
+    """Create an idempotent municipal trigger payload without calling an unapproved gateway."""
+    rows = fetch_rows(
+        _database_url(),
+        """
+        SELECT advisory_id, district_id, forecast_date, alert_level, text, status, approved_by
+        FROM advisory_drafts WHERE advisory_id=%s
+        """,
+        (advisory_id,),
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="advisory not found")
+    advisory = rows[0]
+    if advisory["status"] != "approved":
+        raise HTTPException(status_code=409, detail="only approved advisories can create municipal triggers")
+    allowed = {"open_cooling_centres", "adjust_outdoor_work_hours", "stage_ambulances", "review_grid_load", "check_water_supply"}
+    actions = request.action_types or ["open_cooling_centres", "adjust_outdoor_work_hours", "stage_ambulances"]
+    if any(action not in allowed for action in actions):
+        raise HTTPException(status_code=400, detail="unknown municipal action type")
+    result = {
+        "advisory_id": advisory_id,
+        "district_id": advisory["district_id"],
+        "forecast_date": str(advisory["forecast_date"]),
+        "alert_level": advisory["alert_level"],
+        "actions": actions,
+        "status": "ready_for_gateway",
+        "gateway": "not_configured",
+        "approved_by": advisory["approved_by"],
+        "created_at": datetime.now(UTC).isoformat(),
+    }
+    stored, repeated = _record_dispatch_result(
+        advisory_id, "municipal_trigger", request.idempotency_key, actor, result
+    )
+    return {**stored, "idempotent_replay": repeated}
 
 class NLQueryRequest(BaseModel):
     query: str

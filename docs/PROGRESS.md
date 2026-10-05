@@ -105,3 +105,22 @@
 - **Tests:** 81 pass in Docker (added `test_eval_events.py`: event label rule, and `cached_only` never calls the network). The host port 5432 was held by another project, so tests ran with the Postgres host port mapping removed.
 - **Retrained:** bias correctors retrained on the 140 cached districts (96,022 samples, was 56,538 for 81 districts); `train_bias` now uses cached data only. Held-out MAE raw → corrected: coastal 0.70→0.58 °C, hills 0.94→0.73, plains 0.63→0.54. Still 2024–2025, lead day 1, against ERA5. The ~500 uncached districts still extrapolate from other districts' zone models.
 - **Landing page:** replay cards 2–4 recomputed from `data/replay/*.json` (they still showed values from the old 29-district version). Regions are the named states in the 641-district set: Odisha + Andhra Pradesh, Bihar + Uttar Pradesh, Andhra Pradesh + Telangana, so card titles no longer say "coastal Andhra" or "eastern UP" (districts are not split that finely). All four regions are red on every replay day, so the old orange squares were removed. Card 1 and the Bhubaneswar comparison already matched the data.
+
+## 2026-10-04 — SIH26083 product hardening
+
+- **Thermal exposure:** hourly shade and sun-exposed UTCI are computed with pinned `pythermalcomfort` solar gain, alongside peak WBGT/Heat Index and strong-stress duration. Track 2 uses the conservative sun-exposed peak; every alert records shade/sun values, exposure hours, HTSI and the method version.
+- **Ward action:** `/ward-outlook/{district_id}` ranks pilot-city wards with an explicit district-hazard/population-exposure assumption. It states that no meteorological downscaling occurred and never changes the district alert.
+- **Health:** the aggregated ward-day mortality/admission import contract rejects person-level data; `/health-impact/{district_id}` exposes a separate illustrative RR sensitivity scenario, no counts, no alert input, and a calibration-pending status.
+- **Security and delivery:** HMAC-signed eight-hour sessions, server-side role checks, strict deployment mode, idempotent dispatch records, CAP Test status and municipal trigger payloads. Default demo credentials are visibly labelled and must not be used in deployment.
+- **Provenance:** `/readiness` and the dashboard expose passed, partial and blocked deployment gates, including community boundaries, lead-day-1 validation, health-data availability and India CAP integration.
+- **UI:** officer sign-in, permission-safe states, ward action queue, health readiness, RR caveats, provenance drawer, keyboard focus and responsive form behavior.
+- **Verification:** backend reference/monotonicity/contract tests and frontend type/build checks cover the new modules. Remaining scientific and integration gaps are documented in `LIMITATIONS.md` rather than hidden.
+
+## 2026-10-05 — approved open health-reference import
+
+- **Imported:** 640 Census-2011 district demographic rows with total population, age-60+ population and elderly share; 8 NPCCHH national surveillance observations for 2021–2024; and 185 NCRB State/UT plus all-India annual heat/sun-stroke death observations for 2018–2022.
+- **Integrity:** every normalized CSV is pinned by SHA-256 and expected row count. Validation also checks the Census India total (1,210,854,977), NCRB national totals (890, 1,274, 530, 374, 730), non-negative counts, unique keys and the missing—not zero—NPCCHH 2021 death value.
+- **Isolation:** annual national/state rows load only into `health_reference_observations`; the operational `health_observations` ward-day table remains untouched. Census demographics do not change alert thresholds or colours.
+- **API:** `/health-reference/status` reports coverage, licences and the non-training boundary; `/demographics/{district_id}` exposes labelled Census-2011 context.
+- **Reproducibility:** `scripts/build_open_health_reference.py` rebuilds the committed files from the official Census API and PIB table; the NPCCHH values are transcribed from the official Rajya Sabha annexure cited in the manifest.
+- **Status:** public context is materially improved, but the health-outcome model is still blocked until an approved multi-year ward/day mortality or heat-admission dataset is connected and evaluated with temporal holdouts.

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertResponse, DistrictProps, Forecast, Indices, ReplayRow, Vulnerability, fmt, getJson, shortDate } from "./api";
+import { AlertResponse, DistrictProps, Forecast, HealthDataStatus, HealthImpact, Indices, ReplayRow, Vulnerability, WardOutlook, fmt, getJson, qs, shortDate } from "./api";
 
 type Series = { key: string; label: string; colour: string; values: (number | null)[]; dashed?: boolean };
 
@@ -30,12 +30,15 @@ function Chart({ dates, series, selected }: { dates: string[]; series: Series[];
   );
 }
 
-type Props = { districtId: string; district?: DistrictProps; dayIndex: number; vulnerability: Vulnerability | null; refreshKey: number; replay?: ReplayRow[] };
+type Props = { districtId: string; district?: DistrictProps; dayIndex: number; forecastDate: string; vulnerability: Vulnerability | null; refreshKey: number; replay?: ReplayRow[] };
 
-export function DistrictPanel({ districtId, district, dayIndex, vulnerability, refreshKey, replay }: Props) {
+export function DistrictPanel({ districtId, district, dayIndex, forecastDate, vulnerability, refreshKey, replay }: Props) {
   const [alerts, setAlerts] = useState<AlertResponse | null>(null);
   const [forecast, setForecast] = useState<Forecast[]>([]);
   const [indices, setIndices] = useState<Indices[]>([]);
+  const [outlook, setOutlook] = useState<WardOutlook | null>(null);
+  const [health, setHealth] = useState<HealthDataStatus | null>(null);
+  const [healthImpact, setHealthImpact] = useState<HealthImpact | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -59,6 +62,20 @@ export function DistrictPanel({ districtId, district, dayIndex, vulnerability, r
     return () => controller.abort();
   }, [districtId, refreshKey, replay]);
 
+  useEffect(() => {
+    getJson<HealthDataStatus>("/health-data/status").then(setHealth, () => undefined);
+  }, [refreshKey]);
+
+  useEffect(() => {
+    setOutlook(null);
+    setHealthImpact(null);
+    if (!forecastDate || replay) return;
+    const controller = new AbortController();
+    getJson<WardOutlook>(`/ward-outlook/${districtId}?${qs({ forecast_date: forecastDate })}`, controller.signal).then(setOutlook, () => undefined);
+    getJson<HealthImpact>(`/health-impact/${districtId}?${qs({ forecast_date: forecastDate })}`, controller.signal).then(setHealthImpact, () => undefined);
+    return () => controller.abort();
+  }, [districtId, forecastDate, refreshKey, replay]);
+
   const alert = alerts?.items[dayIndex];
   const day = forecast[dayIndex];
   const index = indices[dayIndex];
@@ -78,7 +95,7 @@ export function DistrictPanel({ districtId, district, dayIndex, vulnerability, r
   return (
     <>
       <div className="panel-heading">
-        <div><p className="eyebrow">{district?.state} · {district?.climate_zone} zone</p><h2>{district?.name ?? "Select a district"}</h2></div>
+        <div><p className="district-context">{district?.state} · {district?.climate_zone} zone</p><h2>{district?.name ?? "Select a district"}</h2></div>
         <span className={`alert-badge ${level}`}>{level}</span>
       </div>
       {error && <div className="blocked-card"><h3>Could not load district</h3><p>{error}</p></div>}
@@ -88,9 +105,10 @@ export function DistrictPanel({ districtId, district, dayIndex, vulnerability, r
         <>
           <div className="metrics">
             <article><span>Tmax · {shortDate(day.date)}</span><strong>{fmt(day.tmax_c)}°C</strong><small>{day.departure_c === null ? "normal not loaded" : `${day.departure_c >= 0 ? "+" : ""}${fmt(day.departure_c)}°C vs 1991–2020`}</small></article>
-            <article><span>UTCI (shade)</span><strong>{fmt(index?.utci_c)}°C</strong><small>feels-like stress</small></article>
+            <article><span>UTCI · sun-exposed</span><strong>{fmt(index?.utci_sun_c ?? index?.utci_c)}°C</strong><small>shade {fmt(index?.utci_shade_c)}°C</small></article>
             <article><span>WBGT (est.)</span><strong>{fmt(index?.wbgt_est_c)}°C</strong><small>work/exercise limit</small></article>
             <article><span>Heat Index</span><strong>{fmt(index?.heat_index_c)}{index?.heat_index_c == null ? "" : "°C"}</strong><small>RH {fmt(day.relative_humidity_pct, 0)}% · Tmin {fmt(day.tmin_c)}°C</small></article>
+            <article><span>Strong-stress exposure</span><strong>{index?.stress_hours ?? "—"} h</strong><small>UTCI ≥32°C · HTSI {fmt(index?.htsi, 2)}</small></article>
           </div>
           <Chart
             dates={dates}
@@ -98,7 +116,8 @@ export function DistrictPanel({ districtId, district, dayIndex, vulnerability, r
             series={[
               { key: "tmax", label: "Tmax", colour: "#b92d24", values: forecast.map((item) => item.tmax_c) },
               { key: "normal", label: "Normal Tmax", colour: "#8a958f", values: forecast.map((item) => item.normal_tmax_c), dashed: true },
-              { key: "utci", label: "UTCI", colour: "#e97824", values: indices.map((item) => item.utci_c) },
+              { key: "utci", label: "UTCI sun", colour: "#e97824", values: indices.map((item) => item.utci_sun_c ?? item.utci_c) },
+              { key: "utci-shade", label: "UTCI shade", colour: "#9a7412", values: indices.map((item) => item.utci_shade_c), dashed: true },
               { key: "wbgt", label: "WBGT", colour: "#2b6cb0", values: indices.map((item) => item.wbgt_est_c) },
               { key: "hi", label: "Heat Index", colour: "#6b46c1", values: indices.map((item) => item.heat_index_c) },
             ]}
@@ -116,10 +135,20 @@ export function DistrictPanel({ districtId, district, dayIndex, vulnerability, r
         </>
       ) : !error && <div className="blocked-card"><h3>No alert record</h3><p>Run the operational pipeline to populate this district.</p></div>}
       <section className="vulnerability">
-        <div className="section-title"><h3>Ward population exposure</h3><span>{vulnerability?.data_vintage ?? ""}</span></div>
-        {vulnerability?.status === "available" ? (
+        <div className="section-title"><h3>Ward action queue</h3><span>{vulnerability?.data_vintage ?? ""}</span></div>
+        {outlook?.status === "available" ? (
+          <><ol>{outlook.items.slice(0, 6).map((ward) => <li key={ward.ward_id}><b>#{ward.rank} {ward.name}</b><span><i className={`priority ${ward.response_priority}`} />{ward.response_priority} · {Math.round(ward.population_estimate).toLocaleString("en-IN")}</span></li>)}</ol>
+          <p>{outlook.basis}</p></>
+        ) : vulnerability?.status === "available" ? (
           <ol>{vulnerability.items.slice(0, 6).map((ward) => <li key={ward.ward_id}><b>#{ward.rank} {ward.name}</b><span>{Math.round(ward.population_estimate).toLocaleString("en-IN")} people</span></li>)}</ol>
         ) : <p>Ward-level exposure is loaded for the pilot cities (Ahmedabad, New Delhi, Chennai). District-level alerts apply here.</p>}
+      </section>
+      <section className="health-status">
+        <div className="section-title"><h3>Health outcome readiness</h3><span className={`gate ${health?.status === "connected" ? "partial" : "blocked"}`}>{health?.status === "connected" ? "validation needed" : "data needed"}</span></div>
+        <p>{health?.message ?? "Checking approved health-data connection…"}</p>
+        {healthImpact?.items[0] && <div className="rr-scenario"><b>{healthImpact.label}</b><strong>{healthImpact.items[0].relative_risk_index.toFixed(2)}×</strong><span>sensitivity {healthImpact.items[0].sensitivity_low.toFixed(2)}–{healthImpact.items[0].sensitivity_high.toFixed(2)}× · highest-exposure ward</span></div>}
+        {healthImpact && <p>{healthImpact.warning}</p>}
+        <small>No death or hospital count is inferred from weather alone.</small>
       </section>
     </>
   );

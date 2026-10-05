@@ -31,9 +31,9 @@ function Advisories({ districtId, date, level, user, blocked, onChange }: Props 
       <p className="hint">Advisories are drafted from approved templates for the alert on <b>{shortDate(date)}</b> ({level}). Nothing is sent until an officer approves.</p>
       <div className="row">
         {LANGUAGES.map(([code, label]) => (
-          <button key={code} disabled={blocked || level === "green"} onClick={() => run(send("POST", `/advisories/${districtId}?${qs({ forecast_date: date, language: code })}`), `${label} draft created`)}>Draft {label}</button>
+          <button key={code} disabled={blocked || level === "green" || !user} onClick={() => run(send("POST", `/advisories/${districtId}?${qs({ forecast_date: date, language: code })}`), `${label} draft created`)}>Draft {label}</button>
         ))}
-        <button className="ghost" disabled={blocked || level === "green"} title="LLM translation of the approved English text; still needs approval" onClick={() => run(send("POST", `/advisories/${districtId}/regional?${qs({ forecast_date: date })}`), "Regional-language draft created (LLM translation)")}>Regional language (AI)</button>
+        <button className="ghost" disabled={blocked || level === "green" || !user} title="LLM translation of the approved English text; still needs approval" onClick={() => run(send("POST", `/advisories/${districtId}/regional?${qs({ forecast_date: date })}`), "Regional-language draft created (LLM translation)")}>Regional language (AI)</button>
       </div>
       {level === "green" && <p className="hint">Green alert: no advisory needed.</p>}
       {message && <p className="flash">{message}</p>}
@@ -43,13 +43,14 @@ function Advisories({ districtId, date, level, user, blocked, onChange }: Props 
           <p className="advisory-text">{advisory.text}</p>
           <div className="row">
             {advisory.status === "pending_approval" && <>
-              <button disabled={!user} onClick={() => run(send("PATCH", `/advisories/${advisory.advisory_id}/approve?${qs({ user_id: user?.user_id, action: "approve" })}`), "Approved")}>Approve as {user?.username}</button>
-              <button className="ghost" disabled={!user} onClick={() => run(send("PATCH", `/advisories/${advisory.advisory_id}/approve?${qs({ user_id: user?.user_id, action: "reject" })}`), "Rejected")}>Reject</button>
+              <button disabled={!user} onClick={() => run(send("PATCH", `/advisories/${advisory.advisory_id}/approve?${qs({ action: "approve" })}`), "Approved")}>Approve as {user?.username}</button>
+              <button className="ghost" disabled={!user} onClick={() => run(send("PATCH", `/advisories/${advisory.advisory_id}/approve?${qs({ action: "reject" })}`), "Rejected")}>Reject</button>
             </>}
             {advisory.status === "approved" && <>
               <button onClick={() => getJson<{ cap_xml: string }>(`/advisories/${advisory.advisory_id}/cap`).then((value) => setCap({ ...cap, [advisory.advisory_id]: cap[advisory.advisory_id] ? "" : value.cap_xml }), (error: Error) => setMessage(error.message))}>CAP 1.2 XML</button>
-              <button onClick={() => run(send("POST", `/advisories/${advisory.advisory_id}/dispatch/sms`, { phone_numbers: ["+919800000001", "+919800000002"] }), "SMS dispatched (simulated gateway)")}>Dispatch SMS</button>
-              <button onClick={() => run(send("POST", `/advisories/${advisory.advisory_id}/dispatch/email`, { email_addresses: ["district-eoc@example.gov.in"] }), "Email dispatched (simulated gateway)")}>Dispatch email</button>
+              <button disabled={!user} onClick={() => run(send("POST", `/advisories/${advisory.advisory_id}/dispatch/sms`, { phone_numbers: ["+919800000001", "+919800000002"], idempotency_key: `${advisory.advisory_id}-sms-demo` }), "SMS accepted by simulated gateway")}>Dispatch SMS</button>
+              <button disabled={!user} onClick={() => run(send("POST", `/advisories/${advisory.advisory_id}/dispatch/email`, { email_addresses: ["district-eoc@example.gov.in"], idempotency_key: `${advisory.advisory_id}-email-demo` }), "Email accepted by simulated gateway")}>Dispatch email</button>
+              <button className="ghost" disabled={!user} onClick={() => run(send("POST", `/advisories/${advisory.advisory_id}/trigger/municipal`, { idempotency_key: `${advisory.advisory_id}-municipal-demo`, action_types: [] }), "Municipal trigger payload prepared; gateway integration pending")}>Prepare city trigger</button>
             </>}
           </div>
           {cap[advisory.advisory_id] && <pre className="cap">{cap[advisory.advisory_id]}</pre>}
@@ -78,7 +79,7 @@ function Resources({ districtId, date, user, blocked, onChange }: Props & { onCh
           await send("POST", `/tasks/${districtId}?${qs({
             task_type: kind, title: `${RESOURCE_LABEL[kind]} × ${amount} — ${ward.name}`, ward_id: ward.ward_id, quantity: amount,
             priority: allocation.alert_level === "red" ? "critical" : allocation.alert_level === "orange" ? "high" : "normal",
-            location_lat: ward.lat, location_lon: ward.lon, description: `Heat response for ${shortDate(date)} (${allocation.alert_level} alert)`, user_id: user?.user_id,
+            location_lat: ward.lat, location_lon: ward.lon, description: `Heat response for ${shortDate(date)} (${allocation.alert_level} alert)`,
           })}`);
           count += 1;
         }
@@ -87,7 +88,7 @@ function Resources({ districtId, date, user, blocked, onChange }: Props & { onCh
     } catch (error) { setMessage((error as Error).message); }
     reloadTasks(); onChange();
   };
-  const update = (task: Task, status: string) => send("PATCH", `/tasks/${task.task_id}?${qs({ status, user_id: user?.user_id })}`).then(() => { reloadTasks(); onChange(); }, (error: Error) => setMessage(error.message));
+  const update = (task: Task, status: string) => send("PATCH", `/tasks/${task.task_id}?${qs({ status })}`).then(() => { reloadTasks(); onChange(); }, (error: Error) => setMessage(error.message));
 
   const kinds = Object.keys(allocation?.items.find((item) => Object.keys(item.resources).length)?.resources ?? {});
   return (
@@ -106,7 +107,7 @@ function Resources({ districtId, date, user, blocked, onChange }: Props & { onCh
           ))}</tbody>
         </table></div>
         <p className="hint">{allocation.basis}.</p>
-        <button onClick={createAll}>Create response tasks</button>
+        <button disabled={!user} onClick={createAll}>Create response tasks</button>
       </>}
       {message && <p className="flash">{message}</p>}
       <h4>Response tasks</h4>
@@ -115,7 +116,7 @@ function Resources({ districtId, date, user, blocked, onChange }: Props & { onCh
         <article key={task.task_id} className="card task">
           <header><b>{task.title}</b><span className={`chip ${task.priority}`}>{task.priority}</span></header>
           <div className="row">
-            <select value={task.status} onChange={(event) => update(task, event.target.value)}>
+            <select disabled={!user} value={task.status} onChange={(event) => update(task, event.target.value)}>
               {["pending", "in_progress", "completed", "cancelled"].map((status) => <option key={status} value={status}>{status.replace("_", " ")}</option>)}
             </select>
             <small>{RESOURCE_LABEL[task.task_type]}{task.quantity ? ` · qty ${task.quantity}` : ""}</small>

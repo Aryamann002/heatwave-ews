@@ -44,7 +44,7 @@ The problem statement asks for four things:
 | Requirement | How Heatwatch meets it | Where |
 |---|---|---|
 | Data ingestion | Hourly temperature, relative humidity, surface pressure, 10 m wind, shortwave and direct radiation from the ECMWF IFS forecast; 30 years of ERA5 daily Tmax/Tmin for normals; ERA5 hourly history for replays | `backend/pipeline/s1_fetch.py`, `climatology.py`, `replay.py` |
-| Thermal stress indices | UTCI, estimated WBGT (Liljegren) and Heat Index computed at the hottest hour of each IST day | `backend/indices/` |
+| Thermal stress indices | Hourly shade and sun-exposed UTCI, estimated WBGT (Liljegren), Heat Index, strong-stress duration and HTSI; daily peaks are retained | `backend/indices/` |
 | Early warning + AI/ML | Two alert tracks (IMD criteria against 1991–2020 normals; UTCI human-stress scale with hot nights), max-of-tracks, full reasoning trace; LightGBM bias correction of forecast Tmax; historical replays of real heatwaves | `backend/app/alerts.py`, `backend/pipeline/operational.py`, `backend/models/` |
 | Decision-support GIS | MapLibre dashboard: alert and index layers, 7-day selector, district ranking, ward exposure map, advisories with officer approval, CAP 1.2, simulated SMS/email dispatch, ward resource allocation, task board, audit log, question box | `frontend/src/`, `backend/app/main.py` |
 
@@ -122,9 +122,9 @@ sequenceDiagram
   P->>OM: 7-day hourly forecast per district (retries on dropped connections)
   OM-->>P: T, RH, pressure, wind, shortwave, direct radiation
   P->>P: QC (ranges, lengths) · failure → run marked failed, alerts blocked
-  P->>P: group hours into IST days, take hottest hour
+  P->>P: group hours into IST days, compute hourly exposure
   P->>P: correct daily Tmax (LightGBM, zone models that beat raw)
-  P->>P: UTCI, WBGT, Heat Index at hottest hour
+  P->>P: peak shade/sun UTCI, WBGT, Heat Index, duration + HTSI
   P->>P: Track 1 (IMD criteria vs normal) + Track 2 (UTCI, hot nights)
   P->>DB: forecast, indices, alerts with reasoning, rule + model versions
   Note over DB: API serves alerts only if the latest run passed QC and is under 12 h old
@@ -133,7 +133,7 @@ sequenceDiagram
 Key behaviours:
 
 - **Idempotent and traceable.** Each run has an ID (`open-meteo-YYYYMMDDTHHMMSSZ`). Raw responses and a SHA-256 manifest are stored under `data/raw/open-meteo/<run_id>/`.
-- **Local days.** Hourly values are grouped by IST calendar day; each day's indices use the hottest hour.
+- **Local days.** Hourly values are grouped by IST calendar day; daily products retain the peak of each index plus the number of hours at UTCI ≥32°C.
 - **Fail safe.** Any fetch or QC failure writes a failed run. The dashboard then shows *ALERTS BLOCKED* rather than stale levels.
 - **Retries.** Dropped connections, rate limits (HTTP 429) and server errors are retried with back-off; other errors fail the run.
 
@@ -152,8 +152,15 @@ Key behaviours:
 | WorldPop 2020 India 1 km population | Ward population exposure | CC BY 4.0 |
 | DataMeet Census 2011 district boundaries | District polygons | CC BY 2.5 India |
 | DataMeet municipal ward boundaries | Ahmedabad, Delhi, Chennai wards | CC BY-SA 2.5 India |
+| Census of India 2011 C-14 | District total and age-60+ population context | ORGI Census API Terms of Use; attribution required |
+| NPCCHH national surveillance, 2021–2024 | National suspected heat-illness cases and confirmed heatstroke deaths | Government Open Data License - India |
+| NCRB, 2018–2022 | Annual State/UT deaths due to heat/sun stroke | Government Open Data License - India |
 
 All sources are pinned in config (`config/boundary_source.json`, `config/vulnerability_source.json`) with commit hashes or checksums. Expensive-to-rebuild results are committed to the repository: `data/climatology/normals_era5.json` (1991–2020 normals for all 641 districts), `data/raw/bias_training/`, `data/replay/` and `data/models/`. The 2.7 GB of raw ERA5 hourly files are not committed; `python -m pipeline.climatology cds` rebuilds them with a Copernicus key.
+
+The public health reference manifest is `config/open_health_sources.json`; normalized files live under `data/reference/health/`. Startup verifies their SHA-256, row counts, missing-value semantics and published control totals before loading 640 district demographic rows and 193 annual/cumulative outcome-reference rows. The `/health-reference/status`, `/health-reference/outcomes` and `/demographics/{district_id}` endpoints expose them as context. They are explicitly barred from operational training because their geography and time grain cannot support the SIH requirement for ward-level 3–5-day outcome prediction.
+
+Required ORGI notice: **This product uses the ORGI Census API but is not endorsed or certified by ORGI.**
 
 ### Coverage
 
@@ -172,9 +179,10 @@ The zone rule (`scripts/build_all_districts.py`): **hills** if the median of 7 s
 
 | Index | What it measures | Implementation | Inputs | Notes |
 |---|---|---|---|---|
-| **UTCI** — Universal Thermal Climate Index | "Feels-like" temperature from a model of human heat balance | `pythermalcomfort.utci` (v4.6.0) | Air temperature, mean radiant temperature, wind, humidity | Shade estimate: mean radiant temperature is set to air temperature because the forecast lacks the full radiation budget. Primary index. |
+| **UTCI** — Universal Thermal Climate Index | "Feels-like" temperature from a model of human heat balance | `pythermalcomfort.utci` + `solar_gain` (v4.6.0) | Air temperature, scenario MRT, wind, humidity | Shade MRT=Tair plus a fixed sun-exposure MRT scenario from direct radiation and solar geometry. Track 2 uses the higher sun-exposed daily peak; assumptions are recorded in each alert. |
 | **WBGT (estimated)** — Wet Bulb Globe Temperature | Heat stress for work and exercise; used by occupational and sports guidelines | `thermofeel.calculate_wbgt_liljegren` (v2.3.0) | Temperature, humidity, pressure, wind, shortwave radiation, direct fraction, solar zenith (NOAA equations) | Estimated, not measured: real WBGT needs a globe thermometer. |
 | **Heat Index** | Apparent temperature from temperature and humidity (NOAA) | `pythermalcomfort.heat_index_rothfusz` | Temperature, humidity | Undefined below 27 °C (stored as null). |
+| **HTSI** | Assumption-weighted thermal burden | `indices.composite` | UTCI, WBGT, hot nights, stress duration | Versioned weights; shown separately from the official-criteria track. |
 
 Each index has reference-value and monotonicity tests (raising humidity at fixed temperature must not reduce heat stress) in `backend/tests/`.
 
@@ -321,7 +329,7 @@ flowchart LR
 
 Resource suggestions use planning ratios — one water point per 25,000 people, one cooling centre per 50,000, one ambulance staging point per 100,000 — scaled by alert level (yellow ×0.5, orange ×1, red ×1.5). These are placeholders for state Heat Action Plan norms; officers edit quantities before creating tasks.
 
-Roles: viewer, officer, admin. Only officers and admins can approve advisories. Identity is chosen in the UI (no authentication yet).
+Roles: viewer, officer, admin. Signed eight-hour sessions protect operational mutations; only officers and admins can approve advisories. The local walkthrough is visibly marked demo mode, while strict deployments take secrets and credentials only from environment variables.
 
 ---
 
@@ -433,13 +441,13 @@ docker compose run --rm backend python -m models.train_bias   # retrain bias cor
 
 Main limitations (full list in `docs/LIMITATIONS.md`):
 
-- UTCI is a shade estimate and WBGT is estimated, not measured.
+- UTCI is shown for shade and a fixed sun-exposure scenario; neither is a personal measurement. WBGT is estimated, not measured.
 - Each district is represented by one forecast point; small neighbouring districts (for example in Delhi) share a forecast grid cell.
 - Normals come from ERA5 reanalysis, which smooths extremes; they differ from IMD station normals.
 - Track 2 thresholds and resource planning ratios are unvalidated assumptions.
 - Climate zones come from a terrain rule (and, for 81 districts, the team), not from IMD.
 - The Tmax correction is trained on two years and on the first forecast day only.
-- There is no authentication; dispatch gateways are simulated.
+- Authentication is local/session-based rather than government SSO; dispatch gateways remain simulated although requests are authenticated, audited and idempotent.
 - Boundaries are Census 2011 (community-maintained), not current official boundaries.
 
 Future scope:

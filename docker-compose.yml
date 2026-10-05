@@ -6,12 +6,10 @@ services:
       POSTGRES_USER: heatwave
       POSTGRES_HOST_AUTH_METHOD: trust
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U heatwave -d heatwave"]
+      test: [ "CMD-SHELL", "pg_isready -U heatwave -d heatwave" ]
       interval: 5s
       timeout: 5s
       retries: 10
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -25,13 +23,18 @@ services:
     environment:
       DATABASE_URL: postgresql://heatwave@postgres:5432/heatwave
       GROQ_API_KEY: ${GROQ_API_KEY:-}
+      AUTH_MODE: ${AUTH_MODE:-demo}
+      HEATWATCH_SESSION_SECRET: ${HEATWATCH_SESSION_SECRET:-}
+      HEATWATCH_USERS_JSON: ${HEATWATCH_USERS_JSON:-}
+      CAP_STATUS: ${CAP_STATUS:-Test}
+      CAP_SENDER: ${CAP_SENDER:-heatwatch-demo@example.invalid}
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" ]
       interval: 5s
       timeout: 5s
       retries: 10
     ports:
-      - "8000:8000"
+      - "8543:8000"
     volumes:
       - ./data:/app/data
 
@@ -39,7 +42,7 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    command: ["python", "-m", "pipeline"]
+    command: [ "python", "-m", "pipeline" ]
     depends_on:
       backend:
         condition: service_healthy
@@ -53,6 +56,8 @@ services:
 
   frontend:
     build: ./frontend
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8543}
     depends_on:
       backend:
         condition: service_healthy

@@ -1,0 +1,11 @@
+{
+  "version": "heat-health-illustrative-2026-10-04",
+  "status": "illustrative_not_fitted",
+  "anchor_relative_risk": 2.34,
+  "stress_score_sensitivity": 0.10,
+  "source_scope": "Ahmedabad pre-plan high-temperature association; not transferable as a fitted national curve",
+  "source_citation": "Hess et al. (2018), Journal of Environmental and Public Health, Article 7973519",
+  "method": "RR = 1 + (anchor - 1) * normalised_stress_score^2",
+  "operational_alert_input": false,
+  "absolute_count_prediction": false
+}

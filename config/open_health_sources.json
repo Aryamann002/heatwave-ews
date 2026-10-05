@@ -1,0 +1,47 @@
+{
+  "version": "2026-10-05",
+  "operational_training": false,
+  "usage_note": "These coarse public aggregates provide demographic and historical context only. They must not be inserted into health_observations or used to fit ward-day outcome forecasts.",
+  "sources": [
+    {
+      "source_id": "census-c14-2011",
+      "title": "Census of India 2011, C-14 five-year age groups",
+      "publisher": "Office of the Registrar General & Census Commissioner, India",
+      "catalog_url": "https://censusindia.gov.in/nada/index.php/catalog/1541/",
+      "terms_url": "https://censusindia.gov.in/census.website/en/data/api/terms-of-use",
+      "licence": "ORGI Census API Terms of Use; attribution required",
+      "attribution_notice": "This product uses the ORGI Census API but is not endorsed or certified by ORGI.",
+      "geographic_grain": "Census 2011 district",
+      "temporal_grain": "census year",
+      "file": "census_2011_district_elderly.csv",
+      "sha256": "fd98f313c9b71c50b26746d4abe13fde36a7449eb79414fae75542cf3fe6007e",
+      "expected_rows": 640
+    },
+    {
+      "source_id": "npcchh-heat-surveillance-2021-2024",
+      "title": "National Heat-Related Illness and Death Surveillance, year-wise cases and deaths",
+      "publisher": "National Centre for Disease Control / Ministry of Health and Family Welfare",
+      "catalog_url": "https://ap.data.gov.in/resource/year-wise-cases-and-deaths-reported-national-heat-related-illness-and-death-surveillance",
+      "source_document_url": "https://sansad.in/getFile/annex/265/AU1693_mm8Pgb.pdf?source=pqars",
+      "licence": "Government Open Data License - India",
+      "geographic_grain": "India total",
+      "temporal_grain": "annual surveillance season",
+      "file": "npcchh_heat_surveillance_2021_2024.csv",
+      "sha256": "d8ec803c77e3b4b762c8d5c7e9ecc33e1e814cf3f9c38b04bd8961025cb3ad30",
+      "expected_rows": 8
+    },
+    {
+      "source_id": "ncrb-heat-sunstroke-deaths-2018-2022",
+      "title": "State/UT-wise deaths due to heat/sun stroke",
+      "publisher": "National Crime Records Bureau / Ministry of Home Affairs",
+      "catalog_url": "https://www.data.gov.in/resource/stateut-wise-number-deaths-due-heatsun-stroke-national-crime-record-bureau-ncrbfrom-2018",
+      "source_document_url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2158403&lang=2&reg=48",
+      "licence": "Government Open Data License - India",
+      "geographic_grain": "State/UT and India total",
+      "temporal_grain": "calendar year",
+      "file": "ncrb_heat_sunstroke_deaths_2018_2022.csv",
+      "sha256": "ff3e28cee4906a13deb89952acec999b2c5817e0addb69a88391bea3eb718884",
+      "expected_rows": 185
+    }
+  ]
+}

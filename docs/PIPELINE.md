@@ -9,6 +9,8 @@ Two pipelines share code but run on different schedules.
 1. **Training/offline pipeline:** builds bias-correction and classifier models from history. Run rarely.
 2. **Operational pipeline:** runs each forecast cycle, produces indices, probabilities, alerts.
 
+Public demographic and annual heat-health datasets follow a third, isolated **reference-data path**. Checksummed Census/NPCCHH/NCRB rows load into `district_demographics` and `health_reference_observations`; they never enter the operational `health_observations` ward-day table or the alert engine.
+
 ```mermaid
 flowchart TD
   subgraph Offline
@@ -82,6 +84,7 @@ Every stage has an input contract, output contract, tests and a failure behaviou
 - Pin all package versions (`uv.lock` or `requirements.lock`).
 - Every model artefact stores: code git SHA, data run IDs, config hash.
 - Every alert stores: model versions, rule file version, reasoning trace.
+- Every public health reference file stores: official source URL, terms/licence, expected row count and SHA-256 in `config/open_health_sources.json`.
 
 ## Data quality gates (automated)
 

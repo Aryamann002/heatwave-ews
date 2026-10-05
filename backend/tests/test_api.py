@@ -16,10 +16,16 @@ from app.main import (
     get_alerts,
     get_districts,
     get_forecast,
+    get_demographics,
+    health_reference_status,
     get_indices,
+    get_health_impact,
+    get_health_reference_outcomes,
     get_vulnerability,
+    get_ward_outlook,
 )
 from app.repository import ensure_operational_tables
+from pipeline.open_health_data import seed_open_health_reference
 
 
 class ApiContractTest(unittest.TestCase):
@@ -30,6 +36,20 @@ class ApiContractTest(unittest.TestCase):
         cls.database_url = os.environ["DATABASE_URL"]
         seed_districts(cls.database_url)
         ensure_operational_tables(cls.database_url)
+        seed_open_health_reference(cls.database_url)
+        with psycopg.connect(cls.database_url) as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO users (user_id, username, role)
+                VALUES ('user-officer-1', 'officer', 'officer')
+                ON CONFLICT (user_id) DO UPDATE SET username='officer', role='officer'
+                """
+            )
+
+    def auth_headers(self, client) -> dict[str, str]:
+        response = client.post("/auth/login", json={"username": "officer", "password": "officer-demo"})
+        self.assertEqual(response.status_code, 200)
+        return {"Authorization": f"Bearer {response.json()['token']}"}
 
     def setUp(self) -> None:
         now = datetime.now(UTC)
@@ -49,8 +69,13 @@ class ApiContractTest(unittest.TestCase):
                 ("ahmedabad", date.today(), self.run_id, 42.0, 29.0, 45.0, 2.0),
             )
             cursor.execute(
-                "INSERT INTO thermal_indices VALUES (%s, %s, %s, %s, %s, %s)",
-                ("ahmedabad", date.today(), self.run_id, 39.0, 32.0, 50.0),
+                """
+                INSERT INTO thermal_indices
+                    (district_id, forecast_date, run_id, utci_c, wbgt_est_c, heat_index_c,
+                     utci_shade_c, utci_sun_c, stress_hours, htsi)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                """,
+                ("ahmedabad", date.today(), self.run_id, 39.0, 32.0, 50.0, 36.0, 39.0, 6, 0.72),
             )
             cursor.execute(
                 "INSERT INTO alerts VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
@@ -93,7 +118,9 @@ class ApiContractTest(unittest.TestCase):
         paths = app.openapi()["paths"]
         self.assertTrue(
             {"/districts", "/forecast/{district_id}", "/indices/{district_id}", "/alerts/{district_id}",
-             "/vulnerability/{district_id}"} <= paths.keys()
+             "/vulnerability/{district_id}", "/ward-outlook/{district_id}",
+             "/health-impact/{district_id}", "/health-data/status", "/health-reference/status",
+             "/demographics/{district_id}", "/health-reference/outcomes", "/readiness"} <= paths.keys()
         )
 
     def test_endpoints_return_seeded_data_and_geometry(self) -> None:
@@ -108,6 +135,23 @@ class ApiContractTest(unittest.TestCase):
         self.assertEqual([item["rank"] for item in vulnerability["items"]], [1, 2])
         self.assertEqual(vulnerability["data_vintage"], "test-vintage")
         self.assertEqual(vulnerability["metric"], "population_exposure")
+        outlook = get_ward_outlook("ahmedabad", date.today().isoformat())
+        self.assertFalse(outlook["ward_meteorology_downscaled"])
+        self.assertEqual(outlook["items"][0]["response_priority"], "urgent")
+        impact = get_health_impact("ahmedabad", date.today().isoformat())
+        self.assertFalse(impact["operational_alert_input"])
+        self.assertFalse(impact["absolute_count_prediction"])
+        self.assertGreaterEqual(impact["items"][0]["relative_risk_index"], 1.0)
+        demographics = get_demographics("ahmedabad")
+        self.assertEqual(demographics["data_vintage"], "2011")
+        self.assertFalse(demographics["operational_alert_input"])
+        reference = health_reference_status()
+        self.assertEqual(reference["district_demographics"]["rows"], 640)
+        self.assertEqual(reference["outcome_references"]["rows"], 193)
+        self.assertFalse(reference["operational_training"])
+        outcomes = get_health_reference_outcomes(geography_name="India")
+        self.assertEqual(len(outcomes["items"]), 13)
+        self.assertTrue(all(not item["operational_training"] for item in outcomes["items"]))
 
     def test_vulnerability_is_unavailable_without_approved_rows(self) -> None:
         response = get_vulnerability("unknown-district")
@@ -139,7 +183,11 @@ class ApiContractTest(unittest.TestCase):
         from fastapi.testclient import TestClient
 
         client = TestClient(app)
-        response = client.post("/advisories/ahmedabad", params={"forecast_date": today, "language": "en"})
+        response = client.post(
+            "/advisories/ahmedabad",
+            params={"forecast_date": today, "language": "en"},
+            headers=self.auth_headers(client),
+        )
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["district_id"], "ahmedabad")
@@ -179,7 +227,9 @@ class ApiContractTest(unittest.TestCase):
 
         client = TestClient(app)
         response = client.post(
-            "/advisories/ahmedabad", params={"forecast_date": date.today().isoformat(), "language": "en"}
+            "/advisories/ahmedabad",
+            params={"forecast_date": date.today().isoformat(), "language": "en"},
+            headers=self.auth_headers(client),
         )
         self.assertEqual(response.status_code, 409)
 
@@ -211,7 +261,9 @@ class ApiContractTest(unittest.TestCase):
 
         client = TestClient(app)
         response = client.post(
-            "/advisories/ahmedabad", params={"forecast_date": test_date.isoformat(), "language": "en"}
+            "/advisories/ahmedabad",
+            params={"forecast_date": test_date.isoformat(), "language": "en"},
+            headers=self.auth_headers(client),
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("green", response.json()["detail"])

@@ -31,6 +31,8 @@ class OperationalPipelineTest(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["tmax_c"], 40.0)
         self.assertTrue(all(result[0][name] == result[0][name] for name in ("utci_c", "wbgt_est_c", "heat_index_c")))
+        self.assertGreaterEqual(result[0]["utci_sun_c"], result[0]["utci_shade_c"])
+        self.assertGreaterEqual(result[0]["stress_hours"], 0)
 
     def test_qc_rejects_out_of_range_humidity(self) -> None:
         document = {

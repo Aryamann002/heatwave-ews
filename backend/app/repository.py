@@ -33,6 +33,8 @@ def ensure_operational_tables(database_url: str) -> None:
             district_id text REFERENCES districts(id), forecast_date date NOT NULL,
             run_id text REFERENCES model_runs(run_id), utci_c double precision NOT NULL,
             wbgt_est_c double precision NOT NULL, heat_index_c double precision,
+            utci_shade_c double precision, utci_sun_c double precision,
+            stress_hours integer, htsi double precision,
             PRIMARY KEY (district_id, forecast_date, run_id)
         )
         """,
@@ -128,11 +130,75 @@ def ensure_operational_tables(database_url: str) -> None:
             completed_at timestamptz
         )
         """,
+        """
+        CREATE TABLE IF NOT EXISTS health_observations (
+            ward_id text NOT NULL,
+            observation_date date NOT NULL,
+            outcome_type text NOT NULL CHECK (
+                outcome_type IN ('all_cause_mortality', 'heat_illness_admission')
+            ),
+            count integer NOT NULL CHECK (count >= 0),
+            source_name text NOT NULL,
+            source_vintage text NOT NULL,
+            aggregation_note text NOT NULL,
+            licence_or_agreement text NOT NULL,
+            imported_at timestamptz NOT NULL DEFAULT now(),
+            PRIMARY KEY (ward_id, observation_date, outcome_type)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS district_demographics (
+            district_id text PRIMARY KEY REFERENCES districts(id),
+            census_state_code integer NOT NULL,
+            census_district_code integer NOT NULL,
+            census_national_district_code integer NOT NULL UNIQUE,
+            total_population bigint NOT NULL CHECK (total_population > 0),
+            elderly_60_plus bigint NOT NULL CHECK (elderly_60_plus >= 0 AND elderly_60_plus <= total_population),
+            elderly_share double precision NOT NULL CHECK (elderly_share BETWEEN 0 AND 1),
+            source_id text NOT NULL,
+            data_vintage text NOT NULL,
+            imported_at timestamptz NOT NULL DEFAULT now()
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS health_reference_observations (
+            source_id text NOT NULL,
+            geography_level text NOT NULL CHECK (geography_level IN ('nation', 'state_or_ut')),
+            geography_name text NOT NULL,
+            year integer NOT NULL,
+            period_end date,
+            outcome_type text NOT NULL,
+            count integer CHECK (count >= 0),
+            count_status text NOT NULL CHECK (count_status IN ('reported', 'not_reported')),
+            operational_training boolean NOT NULL DEFAULT false CHECK (operational_training = false),
+            note text NOT NULL,
+            imported_at timestamptz NOT NULL DEFAULT now(),
+            PRIMARY KEY (source_id, geography_name, year, outcome_type),
+            CHECK ((count_status = 'reported' AND count IS NOT NULL)
+                OR (count_status = 'not_reported' AND count IS NULL))
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS dispatch_log (
+            dispatch_id text PRIMARY KEY,
+            advisory_id text NOT NULL REFERENCES advisory_drafts(advisory_id),
+            channel text NOT NULL CHECK (channel IN ('sms', 'email', 'municipal_trigger')),
+            idempotency_key text NOT NULL,
+            actor_id text NOT NULL REFERENCES users(user_id),
+            result jsonb NOT NULL,
+            created_at timestamptz NOT NULL DEFAULT now(),
+            UNIQUE (advisory_id, channel, idempotency_key)
+        )
+        """,
     )
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
         for statement in statements:
             cursor.execute(statement)
         cursor.execute("ALTER TABLE thermal_indices ALTER COLUMN heat_index_c DROP NOT NULL")
+        cursor.execute("ALTER TABLE thermal_indices ADD COLUMN IF NOT EXISTS utci_shade_c double precision")
+        cursor.execute("ALTER TABLE thermal_indices ADD COLUMN IF NOT EXISTS utci_sun_c double precision")
+        cursor.execute("ALTER TABLE thermal_indices ADD COLUMN IF NOT EXISTS stress_hours integer")
+        cursor.execute("ALTER TABLE thermal_indices ADD COLUMN IF NOT EXISTS htsi double precision")
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS climatology_daily (

@@ -2,7 +2,8 @@ import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./styles.css";
-import { DistrictCollection, LAYERS, LayerKey, Overview, OverviewRow, Replay, Scenario, User, Vulnerability, getJson, rank, send, shortDate } from "./api";
+import { DistrictCollection, LAYERS, LayerKey, Overview, OverviewRow, Readiness, Replay, Scenario, User, Vulnerability, getJson, rank, send, shortDate } from "./api";
+import { AuthPanel } from "./AuthPanel";
 import { MapView } from "./MapView";
 import { DistrictPanel } from "./DistrictPanel";
 import { OpsPanel } from "./OpsPanel";
@@ -34,8 +35,7 @@ function QueryBox() {
 function App() {
   const [districts, setDistricts] = useState<DistrictCollection | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [userId, setUserId] = useState("user-officer-1");
+  const [user, setUser] = useState<User | null>(null);
   const [selectedId, setSelectedId] = useState("");
   const [dayIndex, setDayIndex] = useState(0);
   const [layer, setLayer] = useState<LayerKey>("level");
@@ -49,7 +49,9 @@ function App() {
   const [replayState, setReplayState] = useState("");
 
   const [modelCard, setModelCard] = useState<ModelCard | null>(null);
+  const [readiness, setReadiness] = useState<Readiness | null>(null);
   useEffect(() => { getJson<ModelCard>("/model-card").then(setModelCard, () => undefined); }, []);
+  useEffect(() => { getJson<Readiness>("/readiness").then(setReadiness, () => undefined); }, []);
   useEffect(() => { getJson<{ scenarios: Scenario[] }>("/replay/scenarios").then((result) => setScenarios(result.scenarios), () => undefined); }, []);
   useEffect(() => {
     setReplay(null);
@@ -61,7 +63,6 @@ function App() {
 
   useEffect(() => {
     getJson<DistrictCollection>("/districts").then(setDistricts, (error: Error) => setLoadError(error.message));
-    getJson<{ items: User[] }>("/users").then((result) => setUsers(result.items), () => undefined);
   }, []);
 
   useEffect(() => {
@@ -104,19 +105,15 @@ function App() {
   const status = overview?.data_status;
   const counts = ranked.reduce<Record<string, number>>((acc, id) => ({ ...acc, [levelOf(id)]: (acc[levelOf(id)] ?? 0) + 1 }), {});
   const selected = districts?.features.find((feature) => String(feature.id) === selectedId);
-  const user = users.find((item) => item.user_id === userId);
-
   return (
     <main>
+      <a className="skip-link" href="#district-panel">Skip to district details</a>
       <header className="topbar">
-        <a className="brand" href="/landing.html"><p className="eyebrow">Extreme heat early warning · human thermal stress</p><h1>Heatwatch India</h1></a>
+        <a className="brand" href="/landing.html"><h1>Heatwatch India</h1><p>Impact-led heat action support</p></a>
         <QueryBox />
-        <label className="acting">Acting as
-          <select value={userId} onChange={(event) => setUserId(event.target.value)}>
-            {users.filter((item) => item.username !== "system").map((item) => <option key={item.user_id} value={item.user_id}>{item.username} ({item.role})</option>)}
-          </select>
-        </label>
+        <AuthPanel user={user} onSession={setUser} />
       </header>
+      {readiness?.auth.mode === "demo" && <div className="auth-banner" role="status">{readiness.auth.banner} Operational actions still require a signed session.</div>}
       {replayId ? (
         <div className="status-banner replay" role="status">
           <strong>HISTORICAL REPLAY</strong>
@@ -162,10 +159,10 @@ function App() {
             </div>
           </div>
         </div>
-        <aside className="panel">
+        <aside className="panel" id="district-panel">
           {selectedId ? <>
-            <DistrictPanel districtId={selectedId} district={selected?.properties} dayIndex={dayIndex} vulnerability={vulnerability} refreshKey={refreshKey} replay={replayRows} />
-            {replay ? <p className="hint ops">Operations (advisories, resources) run on the live forecast. Switch back to live to act.</p> : date && <OpsPanel districtId={selectedId} districtName={selected?.properties.name ?? selectedId} date={date} level={levelOf(selectedId)} user={user} blocked={blocked} />}
+            <DistrictPanel districtId={selectedId} district={selected?.properties} dayIndex={dayIndex} forecastDate={date} vulnerability={vulnerability} refreshKey={refreshKey} replay={replayRows} />
+            {replay ? <p className="hint ops">Operations run on the live forecast. Switch back to live to act.</p> : date && <OpsPanel districtId={selectedId} districtName={selected?.properties.name ?? selectedId} date={date} level={levelOf(selectedId)} user={user ?? undefined} blocked={blocked} />}
           </> : <p className="hint">Loading districts…</p>}
           {modelCard?.status === "trained" && (
             <section className="model-card">
@@ -176,7 +173,14 @@ function App() {
               </table>
             </section>
           )}
-          <footer>Decision-support prototype · Not an official IMD warning · Track 1 follows IMD heat-wave criteria against 1991–2020 ERA5 normals; Track 2 (UTCI) thresholds are unvalidated assumptions · Forecast: ECMWF IFS 0.25° via Open-Meteo</footer>
+          {readiness && <details className="readiness-panel">
+            <summary>Deployment readiness and provenance</summary>
+            <p>This is decision support, not an official IMD warning. Blocked items must be resolved by the deploying authority.</p>
+            <ul>{readiness.gates.map((gate) => <li key={gate.id}><span className={`gate ${gate.status}`}>{gate.status}</span><b>{gate.label}</b>{gate.detail && <small>{gate.detail}</small>}</li>)}</ul>
+            <h4>Data provenance</h4>
+            <dl>{readiness.provenance.map((item) => <div key={item.layer}><dt>{item.layer}</dt><dd>{Array.isArray(item.source) ? item.source.join(", ") || "Not connected" : item.source}<small>{[item.kind, item.resolution, item.vintage].filter(Boolean).join(" · ")}</small></dd></div>)}</dl>
+          </details>}
+          <footer>Decision-support prototype · Not an official IMD warning · Track 1 follows published IMD heat-wave criteria against 1991–2020 ERA5 normals · Track 2 thresholds and response-priority weights are documented assumptions · Forecast: ECMWF IFS 0.25° via Open-Meteo</footer>
         </aside>
       </section>
     </main>

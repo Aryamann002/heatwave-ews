@@ -1,0 +1,186 @@
+source_id,geography_level,geography_name,year,period_end,outcome_type,count,count_status,operational_training,note
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Andhra Pradesh,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,97,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Andhra Pradesh,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,128,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Andhra Pradesh,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,50,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Andhra Pradesh,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,22,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Andhra Pradesh,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,47,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Arunachal Pradesh,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Arunachal Pradesh,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Arunachal Pradesh,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Arunachal Pradesh,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Arunachal Pradesh,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Assam,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Assam,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,3,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Assam,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Assam,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Assam,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,1,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Bihar,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,64,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Bihar,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,215,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Bihar,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,53,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Bihar,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,57,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Bihar,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,78,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Chhattisgarh,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,1,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Chhattisgarh,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,16,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Chhattisgarh,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,3,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Chhattisgarh,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,2,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Chhattisgarh,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,11,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Goa,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Goa,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Goa,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Goa,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Goa,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Gujarat,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,31,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Gujarat,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,27,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Gujarat,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,12,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Gujarat,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,8,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Gujarat,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,5,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Haryana,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,56,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Haryana,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,46,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Haryana,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,23,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Haryana,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,14,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Haryana,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,27,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Himachal Pradesh,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Himachal Pradesh,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Himachal Pradesh,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Himachal Pradesh,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,1,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Himachal Pradesh,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Jharkhand,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,42,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Jharkhand,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,88,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Jharkhand,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,23,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Jharkhand,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,33,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Jharkhand,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,47,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Karnataka,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Karnataka,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,4,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Karnataka,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,1,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Karnataka,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Karnataka,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,2,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Kerala,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,1,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Kerala,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,3,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Kerala,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Kerala,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Kerala,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Madhya Pradesh,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,15,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Madhya Pradesh,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,33,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Madhya Pradesh,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,7,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Madhya Pradesh,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,2,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Madhya Pradesh,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,27,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Maharashtra,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,128,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Maharashtra,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,159,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Maharashtra,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,56,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Maharashtra,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,37,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Maharashtra,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,90,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Manipur,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Manipur,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Manipur,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Manipur,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Manipur,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Meghalaya,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,4,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Meghalaya,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Meghalaya,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Meghalaya,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Meghalaya,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Mizoram,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Mizoram,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Mizoram,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Mizoram,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Mizoram,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Nagaland,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Nagaland,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Nagaland,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Nagaland,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Nagaland,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Odisha,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,40,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Odisha,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,84,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Odisha,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,13,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Odisha,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,15,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Odisha,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,38,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Punjab,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,38,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Punjab,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,90,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Punjab,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,110,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Punjab,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,91,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Punjab,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,130,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Rajasthan,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,43,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Rajasthan,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,54,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Rajasthan,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,23,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Rajasthan,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,1,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Rajasthan,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,12,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Sikkim,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Sikkim,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,1,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Sikkim,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Sikkim,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Sikkim,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Tamil Nadu,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Tamil Nadu,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Tamil Nadu,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Tamil Nadu,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,2,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Tamil Nadu,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,2,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Telangana,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,107,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Telangana,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,156,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Telangana,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,98,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Telangana,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,43,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Telangana,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,62,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Tripura,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,1,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Tripura,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,1,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Tripura,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,2,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Tripura,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Tripura,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,2,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Uttar Pradesh,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,176,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Uttar Pradesh,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,117,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Uttar Pradesh,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,50,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Uttar Pradesh,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,35,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Uttar Pradesh,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,130,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Uttarakhand,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Uttarakhand,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Uttarakhand,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Uttarakhand,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Uttarakhand,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,West Bengal,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,46,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,West Bengal,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,49,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,West Bengal,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,6,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,West Bengal,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,11,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,West Bengal,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,18,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,A & N Islands,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,A & N Islands,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,A & N Islands,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,A & N Islands,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,A & N Islands,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Chandigarh,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Chandigarh,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Chandigarh,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Chandigarh,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Chandigarh,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,D&N Haveli and Daman&Diu @ +,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,D&N Haveli and Daman&Diu @ +,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,D&N Haveli and Daman&Diu @ +,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,D&N Haveli and Daman&Diu @ +,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,D&N Haveli and Daman&Diu @ +,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Delhi UT,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Delhi UT,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Delhi UT,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Delhi UT,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Delhi UT,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,1,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Jammu & Kashmir @ *,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Jammu & Kashmir @ *,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Jammu & Kashmir @ *,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Jammu & Kashmir @ *,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Jammu & Kashmir @ *,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Ladakh @,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Ladakh @,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Ladakh @,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Ladakh @,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Ladakh @,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Lakshadweep,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Lakshadweep,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Lakshadweep,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Lakshadweep,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Lakshadweep,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Puducherry,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Puducherry,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Puducherry,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Puducherry,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,state_or_ut,Puducherry,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,0,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,nation,India,2018,2018-12-31,deaths_due_to_heat_or_sunstroke,890,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,nation,India,2019,2019-12-31,deaths_due_to_heat_or_sunstroke,1274,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,nation,India,2020,2020-12-31,deaths_due_to_heat_or_sunstroke,530,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,nation,India,2021,2021-12-31,deaths_due_to_heat_or_sunstroke,374,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source
+ncrb-heat-sunstroke-deaths-2018-2022,nation,India,2022,2022-12-31,deaths_due_to_heat_or_sunstroke,730,reported,false,Annual NCRB accidental-death count; state/UT labels preserved from source

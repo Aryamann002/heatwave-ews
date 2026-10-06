@@ -1,4 +1,4 @@
-# Render deployment: free temporary demonstration
+# HeatSafe AI on Render: free temporary demonstration
 
 This is a **temporary presentation deployment**, not an operational warning service. The root `render.yaml` defines one free web service (FastAPI plus the built dashboard at the same HTTPS origin) and one free Render Postgres database with PostGIS. It deliberately defines **no scheduler, cron job, public dispatch gateway, or production alert feed**.
 

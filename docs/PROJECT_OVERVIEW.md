@@ -1,16 +1,16 @@
-# Heatwatch India — Project Overview
+# HeatSafe AI — Project Overview
 
 **Extreme heatwave early warning and human thermal stress index for India**
 
 Prototype built for the Ministry of Earth Sciences (MoES) problem statement *Extreme Heatwave Early Warning and Human Thermal Stress Index* (Disaster Management theme). This document explains what the system does, why it is built the way it is, and how every part works. It describes the system as built; the design documents in `docs/` (PRD, ARCHITECTURE, PIPELINE, TECH_STACK) record the original plan.
 
-> Not an official IMD warning. Heatwatch is a decision-support prototype and is not affiliated with or endorsed by MoES or IMD.
+> Not an official IMD warning. HeatSafe AI is a decision-support prototype and is not affiliated with or endorsed by MoES or IMD.
 
 ---
 
 ## 1. At a glance
 
-Heatwatch turns an open 7-day weather forecast into heat warnings that reflect what the human body feels, and gives district officers the tools to act on them: advisories in local languages, officer approval, CAP export, and resource allocation to the most exposed wards.
+HeatSafe AI turns an open 7-day weather forecast into heat warnings that reflect what the human body feels, and gives district officers the tools to act on them: advisories in local languages, officer approval, CAP export, and resource allocation to the most exposed wards.
 
 | Fact | Value |
 |---|---|
@@ -41,7 +41,7 @@ The problem statement asks for four things:
 
 ## 3. What we built, mapped to the requirements
 
-| Requirement | How Heatwatch meets it | Where |
+| Requirement | How HeatSafe AI meets it | Where |
 |---|---|---|
 | Data ingestion | Hourly temperature, relative humidity, surface pressure, 10 m wind, shortwave and direct radiation from the ECMWF IFS forecast; 30 years of ERA5 daily Tmax/Tmin for normals; ERA5 hourly history for replays | `backend/pipeline/s1_fetch.py`, `climatology.py`, `replay.py` |
 | Thermal stress indices | Hourly shade and sun-exposed UTCI, estimated WBGT (Liljegren), Heat Index, strong-stress duration and HTSI; daily peaks are retained | `backend/indices/` |

@@ -1,4 +1,4 @@
-"""Heatwave EWS HTTP API."""
+"""HeatSafe AI HTTP API."""
 
 import json
 import os
@@ -70,7 +70,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Heatwave EWS", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="HeatSafe AI", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -1183,11 +1183,11 @@ def export_advisory_cap(
 
     alert = ET.Element("alert", xmlns="urn:oasis:names:tc:emergency:cap:1.2")
     ET.SubElement(alert, "identifier").text = advisory_id
-    ET.SubElement(alert, "sender").text = os.environ.get("CAP_SENDER", "heatwatch-demo@example.invalid")
+    ET.SubElement(alert, "sender").text = os.environ.get("CAP_SENDER", "heatsafe-demo@example.invalid")
     ET.SubElement(alert, "sent").text = datetime.now(UTC).isoformat().replace("+00:00", "Z")
     ET.SubElement(alert, "status").text = os.environ.get("CAP_STATUS", "Test")
     ET.SubElement(alert, "msgType").text = "Alert"
-    ET.SubElement(alert, "source").text = "Heatwave EWS"
+    ET.SubElement(alert, "source").text = "HeatSafe AI"
     ET.SubElement(alert, "scope").text = "Public"
 
     info = ET.SubElement(alert, "info")

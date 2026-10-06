@@ -2,7 +2,7 @@
 # No scheduled forecast refresh or real alert delivery is configured.
 services:
   - type: web
-    name: heatwatch-india-demo
+    name: heatsafe-ai-demo
     runtime: docker
     dockerfilePath: ./backend/Dockerfile.render
     dockerContext: .
@@ -12,7 +12,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: heatwatch-india-demo-db
+          name: heatsafe-ai-demo-db
           property: connectionString
       - key: AUTH_MODE
         value: strict
@@ -23,10 +23,10 @@ services:
       - key: CAP_STATUS
         value: Test
       - key: CAP_SENDER
-        value: heatwatch-demo@example.invalid
+        value: heatsafe-demo@example.invalid
 
 databases:
-  - name: heatwatch-india-demo-db
+  - name: heatsafe-ai-demo-db
     databaseName: heatwatch
     user: heatwatch
     plan: free

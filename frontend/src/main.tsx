@@ -109,7 +109,7 @@ function App() {
     <main>
       <a className="skip-link" href="#district-panel">Skip to district details</a>
       <header className="topbar">
-        <a className="brand" href="/landing.html"><h1>Heatwatch India</h1><p>Impact-led heat action support</p></a>
+        <a className="brand" href="/landing.html"><h1>HeatSafe AI</h1><p>Impact-led heat action support</p></a>
         <QueryBox />
         <AuthPanel user={user} onSession={setUser} />
       </header>

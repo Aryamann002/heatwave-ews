@@ -1,10 +1,10 @@
-# Heatwatch India
+# HeatSafe AI
 
 ### Extreme heat early warning, explained as human thermal stress
 
-Heatwatch India is a decision-support prototype for [SIH26083](https://sih.gov.in/): **Extreme Heatwave Early Warning and Human Thermal Stress Index**. It turns an open seven-day weather forecast into district-level thermal-stress indicators, transparent alerts, and a human-reviewed heat-action workflow.
+HeatSafe AI is a decision-support prototype for [SIH26083](https://sih.gov.in/): **Extreme Heatwave Early Warning and Human Thermal Stress Index**. It turns an open seven-day weather forecast into district-level thermal-stress indicators, transparent alerts, and a human-reviewed heat-action workflow.
 
-> **Prototype, not an official warning.** Heatwatch does not issue IMD bulletins, predict a number of deaths or hospital admissions, or send real public SMS/WhatsApp alerts. Use official IMD and local-authority guidance for operational decisions.
+> **Prototype, not an official warning.** HeatSafe AI does not issue IMD bulletins, predict a number of deaths or hospital admissions, or send real public SMS/WhatsApp alerts. Use official IMD and local-authority guidance for operational decisions.
 
 ## What you can explore
 

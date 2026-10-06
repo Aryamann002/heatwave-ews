@@ -131,3 +131,7 @@
 - **Deployment packaging:** added `backend/Dockerfile.render`, same-origin static dashboard serving in FastAPI, `.dockerignore`, and a `render.yaml` Blueprint with a free web service and private free PostGIS database. The Blueprint requires strict authentication, a generated session secret, and CAP Test. No cron/scheduler or real dispatch is included, per the requested free-only scope.
 - **Verification:** Render image built locally; the Blueprint YAML parsed; an isolated test-database smoke run returned 200 for `/health`, `/`, `/readiness`, and `/replay/scenarios`, with `/auth/config` reporting strict mode. Backend suite: 96 tests passed.
 - **Next:** publish this branch and create/verify the Blueprint once Render account access is available. A free deployment's live forecast remains blocked/unrefreshed; paid persistent operation and official validation are separate work.
+
+## 2026-10-06 — project name confirmed
+
+- **Brand:** the project is **HeatSafe AI**. Updated visible dashboard and landing-page labels, API/CAP source labels, README and overview, and the free Render service names. Existing environment-variable keys, ruleset identifiers, and repository slug remain unchanged for compatibility.

@@ -1,72 +1,130 @@
-# Heatwatch India — Heatwave EWS
+# HeatSafe AI
 
-Extreme heatwave early warning and human thermal stress index for India (MoES, Disaster Management theme).
+### Extreme heat early warning, explained as human thermal stress
 
-**What it does:** fetches a 7-day hourly forecast for all 641 Census 2011 districts of India, computes shade and sun-exposed UTCI, estimated WBGT, Heat Index, stress duration and HTSI, compares Tmax against 1991–2020 normals, issues deterministic IMD-style and human-stress alerts, and gives authenticated district officers a GIS dashboard to approve advisories and rank actions for exposed wards. An illustrative relative heat-health risk scenario is shown separately; it predicts no deaths or admissions and never drives alerts.
+HeatSafe AI is a decision-support prototype for [SIH26083](https://sih.gov.in/): **Extreme Heatwave Early Warning and Human Thermal Stress Index**. It turns an open seven-day weather forecast into district-level thermal-stress indicators, transparent alerts, and a human-reviewed heat-action workflow.
 
-**Full documentation:** [`docs/PROJECT_OVERVIEW.md`](docs/PROJECT_OVERVIEW.md) — architecture, data, indices, alert logic, ML, dashboard and API (Word version: [`docs/PROJECT_OVERVIEW.docx`](docs/PROJECT_OVERVIEW.docx)).
+> **Prototype, not an official warning.** HeatSafe AI does not issue IMD bulletins, predict a number of deaths or hospital admissions, or send real public SMS/WhatsApp alerts. Use official IMD and local-authority guidance for operational decisions.
 
-## Quick start
+## What you can explore
 
-```bash
-cp .env.example .env               # optional: add GROQ_API_KEY for regional-language advisories
-docker compose up --build          # postgres, API :8543, dashboard :5173, pipeline, 6-hourly scheduler
+- A seven-day GIS view of **641 Census 2011 district areas** with alert, sun-exposed UTCI, estimated WBGT, Heat Index, and temperature-anomaly layers.
+- Two explainable alert tracks: **temperature/IMD-style criteria** and **human thermal stress**. The higher valid level is shown; stale or failed-quality data block operational alerts.
+- A district panel with the forecast, 1991-2020 ERA5 normal, thermal indices, and a versioned reason trace.
+- Ward **population-exposure priorities** for Ahmedabad, New Delhi, and Chennai (539 wards). These are response priorities, **not ward-level weather forecasts**.
+- Draft and approve advisories, export **CAP 1.2 Test** messages, simulate SMS/email delivery, and assign response tasks. Mutations require a signed officer/admin session.
+- Replay four historical heat events through the same index and alert rules. Replay uses ERA5 reanalysis and does **not** measure how a past issued forecast performed.
+- View health-data readiness and sourced demographic/heat-health context. The illustrative relative-risk scenario produces no mortality or admission counts and never changes alerts.
+
+## At a glance
+
+```text
+ECMWF IFS forecast via Open-Meteo     ERA5 normals / historical replay
+                  \                    /
+                  ingestion + QC + provenance
+                            |
+                  Tmax bias correction
+                            |
+          UTCI / estimated WBGT / Heat Index / HTSI
+                            |
+            two-track deterministic alert engine
+                            |
+                    PostgreSQL + PostGIS
+                            |
+           FastAPI  <-->  React / MapLibre dashboard
+                            |
+          officer approval -> CAP Test / mock dispatch / tasks
 ```
 
-Landing page: http://localhost:5173/landing.html (links into the dashboard and its replays).
+The backend and pipeline are Python. The browser app is React, TypeScript, Vite, and MapLibre. Local orchestration uses Docker Compose. See [the as-built overview](docs/PROJECT_OVERVIEW.md) and [architecture design](docs/ARCHITECTURE.md).
 
-The first pipeline run downloads 30 years of daily temperatures per district (a few minutes, rate-limited) and the ward population data; later runs reuse the cache in `data/`. Open http://localhost:5173.
+## Run locally
 
-To precompute the historical replays so the demo works offline:
+**Requirements:** Docker Desktop with Compose, enough free disk space for the forecast/reanalysis cache, and internet access for the initial data fetch. No API key is needed for the core demo.
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+docker compose up --build
+```
+
+On macOS/Linux:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Open the [dashboard](http://localhost:5173/) or [landing page](http://localhost:5173/landing.html). The API health endpoint is [localhost:8543/health](http://localhost:8543/health); interactive API documentation is at [localhost:8543/docs](http://localhost:8543/docs). Wait for the initial pipeline to finish before expecting live map data. It downloads/cache-builds normals and exposure inputs; the first run can take several minutes or longer depending on upstream services. Later runs reuse `data/`.
+
+The local walkthrough starts in **demo authentication** mode. The interface shows the demo account; `officer / officer-demo` permits the simulated officer flow. Never expose this mode publicly.
+
+For an offline-friendly historical replay after the first setup:
 
 ```bash
 docker compose run --rm backend python -m pipeline.replay
 ```
 
-## How it works
+To stop the application without deleting its database volume:
 
-| Stage | What | Code |
-|---|---|---|
-| Ingest | Open-Meteo hourly T, RH, wind, pressure, shortwave + direct radiation, IST days | `backend/pipeline/s1_fetch.py` |
-| Climatology | 1991–2020 ERA5 daily normals (±7-day window), p90 Tmin for hot nights | `backend/pipeline/climatology.py` |
-| Bias correction | LightGBM per climate zone, ECMWF IFS Tmax → ERA5 frame, 2024–2025, leave-one-year-out; used only where held-out MAE improves (`python -m models.train_bias`) | `backend/models/train_bias.py` |
-| Indices | Shade + sun-exposed UTCI (pythermalcomfort/ASHRAE solar gain), hourly stress duration, WBGT est. (thermofeel Liljegren), Heat Index and HTSI | `backend/indices/` |
-| Track 1 | IMD heat-wave criteria: zone minimum, departure from normal, plains absolute, persistence | `backend/app/alerts.py`, `config/alert_rules.yaml` |
-| Track 2 | Human thermal stress: UTCI assessment scale + consecutive hot nights | same |
-| Alert | max of the two tracks; disagreement logged; blocked when data are stale or fail QC | `backend/pipeline/operational.py` |
-| Exposure | WorldPop 2020 population per ward (Ahmedabad, New Delhi, Chennai), combined with district hazard into a response queue rather than fake ward weather | `backend/pipeline/vulnerability.py`, `backend/models/ward_impact.py` |
-| Health | Privacy-preserving ward-day outcome plug-in plus a labelled illustrative relative-risk sensitivity scenario; no absolute counts | `backend/models/health_data.py`, `backend/models/health_impact.py` |
-| Public health context | Census 2011 district elderly share plus NPCCHH national and NCRB State/UT annual heat-health counts, checksum-validated and isolated from operational training | `backend/pipeline/open_health_data.py`, `config/open_health_sources.json` |
-| Response | Signed sessions and roles, advisory approval, CAP 1.2 Test output, idempotent mock SMS/email, municipal trigger payload, tasks and audit log | `backend/app/main.py` |
-| Replay | Real past heatwaves (ERA5 hourly) run through the same indices and rules | `backend/pipeline/replay.py`, `config/replay_scenarios.json` |
-
-## Commands
-
-| Command | Description |
-|---|---|
-| `docker compose up --build` | Run everything |
-| `make test` | Backend tests, against a separate `heatwave_test` database |
-| `docker compose run --rm --build backend python -m pipeline` | One pipeline cycle (`make pipeline-run`) |
-| `docker compose run --rm --build frontend npm run build` | Type-check and build the dashboard |
-| `python scripts/build_open_health_reference.py` | Rebuild the three normalized public reference files from official sources |
-
-## Safety notes
-
-- Alert levels are computed by deterministic, versioned rules. The LLM never sets or changes an alert level or a number.
-- Stale (>12 h) or QC-failed data block alerts and show a banner.
-- Nothing is dispatched without an authenticated officer/admin session and approval; repeat dispatches are idempotent and every action is in the audit log.
-- Ward outputs are response priorities, not ward-resolution meteorology. Health impact is an illustrative RR scenario, not a mortality forecast.
-- Public NPCCHH/NCRB counts are national or annual State/UT context. They are deliberately excluded from the ward-day training table and do not change alerts.
-- Census age structure is from 2011. The required ORGI notice is: “This product uses the ORGI Census API but is not endorsed or certified by ORGI.”
-- Not an official IMD warning. Known limitations: `docs/LIMITATIONS.md`. Demo walkthrough: `docs/DEMO_SCRIPT.md`.
-
-## Environment (`.env`)
-
+```bash
+docker compose down
 ```
-GROQ_API_KEY=               # optional
-ALLOW_UNPINNED_POPULATION=0 # optional, see config/vulnerability_source.json
-AUTH_MODE=demo              # set strict for deployment
-HEATWATCH_SESSION_SECRET=   # at least 32 random characters in strict mode
-HEATWATCH_USERS_JSON=       # username-to-password JSON, environment only
-CAP_STATUS=Test             # use Actual only after authority/gateway approval
-```
+
+## Reproduce checks
+
+| Check | Command | Meaning |
+| --- | --- | --- |
+| Backend tests | `make test` | Uses a separate `heatwave_test` database |
+| Syntax and frontend build | `make lint` | Python compile check plus TypeScript/Vite build |
+| One forecast cycle | `make pipeline-run` | Refreshes persisted forecast and alert snapshots |
+| Evaluation report | `make eval-report` | Reports “not established” if labelled evaluation inputs are absent |
+| Frontend build alone | `docker compose run --rm --build frontend npm run build` | Type-check and build |
+
+`make` is optional on Windows: the corresponding Docker Compose commands are in [Makefile](Makefile). The CI workflow runs backend tests and the frontend build on pushes and pull requests.
+
+## Forecast, model, and evidence
+
+The current forecast is **ECMWF IFS 0.25-degree data via Open-Meteo**, sampled at a representative point per district. The 1991-2020 normals and historical replay are ERA5-derived. Neither is an official IMD station feed. Adjacent small districts may share a grid cell.
+
+A zone-specific LightGBM model corrects **daily maximum temperature only**. Its model card reports 97,022 2024-2025 first-lead forecast/ERA5 pairs with leave-one-year-out evaluation. Corrected MAE was lower than raw MAE in the coastal (0.701 to 0.583 deg C), hills (0.944 to 0.733 deg C), and plains (0.631 to 0.542 deg C) groups. These are **gridded ERA5 comparisons, not station-observation validation**, and do not establish day-2 through day-7 alert skill. The model card is at [data/models/bias_model_card.json](data/models/bias_model_card.json).
+
+The thermal calculations include shade and fixed-geometry sun-exposed UTCI scenarios, **estimated** outdoor WBGT, Heat Index, strong-stress-hour count, and an experimental composite HTSI. The two alert tracks are deterministic and versioned. An optional LLM may assist with wording or query parsing, but **never chooses an alert level**.
+
+Public health references are kept separate from operational outcome observations: Census 2011 demographics, four NPCCHH national-seasonal rows (2021-2024), and NCRB annual State/UT records (2018-2022). Their geography/time grains cannot support supervised ward-day mortality training. No approved ward-day outcome dataset is connected, so the system intentionally has **no calibrated 3-5 day mortality or hospitalization forecast**.
+
+## Safety and governance
+
+1. **Freshness and QC:** an operational alert is blocked when essential inputs fail quality checks or the forecast is older than the 12-hour prototype threshold. The interface must display the data age.
+2. **Disagreement:** the higher of the temperature and human-stress tracks is issued, and the disagreement is recorded.
+3. **Human approval:** CAP Test export, simulated dispatch, and municipal trigger preparation follow role checks and approval; no automatic public delivery occurs.
+4. **Clear source scale:** district weather is not ward weather. Ward ranking combines district hazard with population exposure, not a local weather estimate.
+5. **Separate health evidence:** relative-risk sensitivity is illustrative and does not yield death/admission counts or drive the operational alert.
+
+**Not production-ready:** the default local database uses trust authentication; demo credentials are public; the audit table is not tamper-evident; government SSO/MFA, real delivery gateways, consent/opt-out, data-governance approvals, and independent IMD/station validation remain outstanding. Production-style deployments must use strict authentication, environment-held secrets, a secured database, CAP `Test` status, and an explicit authority/operational review. The complete [limitations register](docs/LIMITATIONS.md) is part of this README's scope; do not detach the demo from it.
+
+## Configuration
+
+Copy [.env.example](.env.example) to an untracked `.env`. Do not commit secrets.
+
+| Variable | Local default / purpose |
+| --- | --- |
+| `AUTH_MODE` | `demo`; use `strict` for any network-facing deployment |
+| `HEATWATCH_SESSION_SECRET` | Required in strict mode, at least 32 random characters |
+| `HEATWATCH_USERS_JSON` | Strict-mode username/password map supplied privately; use provisioned `viewer`, `officer`, or `admin` names |
+| `CAP_STATUS` | Keep `Test` until authorized profile and gateway approval |
+| `GROQ_API_KEY` | Optional translation/query assistance; templates and keyword parsing work without it |
+| `ALLOW_UNPINNED_POPULATION` | Leave `0` unless deliberately accepting a different raster checksum |
+| `CDSAPI_URL`, `CDSAPI_KEY` | Only for rebuilding Copernicus normals after accepting the dataset terms |
+
+The current Docker Compose file is a **local development/demo** topology. It should not be published unchanged. Render deployment preparation and its remaining manual connection/secrets steps are documented in [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md).
+
+## Documentation and attribution
+
+- [Project overview](docs/PROJECT_OVERVIEW.md): as-built architecture, pipeline, APIs, and UI.
+- [High-level architecture](docs/ARCHITECTURE.md), [pipeline contracts](docs/PIPELINE.md), and [technical stack](docs/TECH_STACK.md): original design; follow the overview and current code when these differ.
+- [Demo script](docs/DEMO_SCRIPT.md), [progress log](docs/PROGRESS.md), [research matrix](docs/RESEARCH_MATRIX.md), and [known limitations](docs/LIMITATIONS.md).
+- Source and licence manifests live in `config/` for weather, boundaries, population, and public-health data. Basemap attribution is shown in the map.
+
+This product uses the ORGI Census API but is **not endorsed or certified by ORGI**. It is not endorsed by IMD, MoES, NDMA, or any public authority.

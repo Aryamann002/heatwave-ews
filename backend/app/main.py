@@ -14,6 +14,7 @@ import psycopg
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.staticfiles import StaticFiles
 
 from app.advisories import IST, AdvisoryDraft, draft_advisory, lint_advisory
 from app.auth import SessionIdentity, auth_mode, issue_session, public_auth_config, read_session, verify_password
@@ -1438,3 +1439,10 @@ def get_replay(scenario_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="unknown scenario")
     except OSError as error:  # network failure on first (uncached) run
         raise HTTPException(status_code=503, detail=f"replay data unavailable: {error}")
+
+
+# Render's single-origin image includes a built frontend. Local Compose keeps
+# its separate Vite service, so this mount is absent there.
+_frontend_dist = Path("frontend_dist")
+if _frontend_dist.is_dir():
+    app.mount("/", StaticFiles(directory=_frontend_dist, html=True), name="frontend")

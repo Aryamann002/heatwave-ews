@@ -1,0 +1,34 @@
+# Free, short-lived SIH demonstration only. See docs/DEPLOY_RENDER.md.
+# No scheduled forecast refresh or real alert delivery is configured.
+services:
+  - type: web
+    name: heatwatch-india-demo
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile.render
+    dockerContext: .
+    plan: free
+    region: singapore
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: heatwatch-india-demo-db
+          property: connectionString
+      - key: AUTH_MODE
+        value: strict
+      - key: HEATWATCH_SESSION_SECRET
+        generateValue: true
+      - key: HEATWATCH_USERS_JSON
+        sync: false
+      - key: CAP_STATUS
+        value: Test
+      - key: CAP_SENDER
+        value: heatwatch-demo@example.invalid
+
+databases:
+  - name: heatwatch-india-demo-db
+    databaseName: heatwatch
+    user: heatwatch
+    plan: free
+    region: singapore
+    ipAllowList: []

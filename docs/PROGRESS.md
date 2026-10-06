@@ -124,3 +124,10 @@
 - **API:** `/health-reference/status` reports coverage, licences and the non-training boundary; `/demographics/{district_id}` exposes labelled Census-2011 context.
 - **Reproducibility:** `scripts/build_open_health_reference.py` rebuilds the committed files from the official Census API and PIB table; the NPCCHH values are transcribed from the official Rajya Sabha annexure cited in the manifest.
 - **Status:** public context is materially improved, but the health-outcome model is still blocked until an approved multi-year ward/day mortality or heat-admission dataset is connected and evaluated with temporal holdouts.
+
+## 2026-10-06 — README and free Render demo preparation
+
+- **Documentation:** rewrote the README around the as-built product, quick start, architecture, evidence boundaries, reproducible checks, safety policy, configuration, and source attribution. Added `docs/DEPLOY_RENDER.md` with a free, temporary replay-demo scope and its limitations.
+- **Deployment packaging:** added `backend/Dockerfile.render`, same-origin static dashboard serving in FastAPI, `.dockerignore`, and a `render.yaml` Blueprint with a free web service and private free PostGIS database. The Blueprint requires strict authentication, a generated session secret, and CAP Test. No cron/scheduler or real dispatch is included, per the requested free-only scope.
+- **Verification:** Render image built locally; the Blueprint YAML parsed; an isolated test-database smoke run returned 200 for `/health`, `/`, `/readiness`, and `/replay/scenarios`, with `/auth/config` reporting strict mode. Backend suite: 96 tests passed.
+- **Next:** publish this branch and create/verify the Blueprint once Render account access is available. A free deployment's live forecast remains blocked/unrefreshed; paid persistent operation and official validation are separate work.

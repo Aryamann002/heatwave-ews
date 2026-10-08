@@ -174,12 +174,12 @@ function App({ user }: { user: User }) {
           )}
           {readiness && <details className="readiness-panel">
             <summary>Deployment readiness and provenance</summary>
-            <p>This is decision support, not an official IMD warning. Blocked items must be resolved by the deploying authority.</p>
+            <p>Blocked items must be resolved by the deploying authority before operational use.</p>
             <ul>{readiness.gates.map((gate) => <li key={gate.id}><span className={`gate ${gate.status}`}>{gate.status}</span><b>{gate.label}</b>{gate.detail && <small>{gate.detail}</small>}</li>)}</ul>
             <h4>Data provenance</h4>
             <dl>{readiness.provenance.map((item) => <div key={item.layer}><dt>{item.layer}</dt><dd>{Array.isArray(item.source) ? item.source.join(", ") || "Not connected" : item.source}<small>{[item.kind, item.resolution, item.vintage].filter(Boolean).join(" · ")}</small></dd></div>)}</dl>
           </details>}
-          <footer>Decision-support prototype · Not an official IMD warning · Track 1 follows published IMD heat-wave criteria against 1991–2020 ERA5 normals · Track 2 thresholds and response-priority weights are documented assumptions · Forecast: ECMWF IFS 0.25° via Open-Meteo</footer>
+          <footer>Track 1 follows published IMD heat-wave criteria against 1991–2020 ERA5 normals · Track 2 thresholds and response-priority weights are documented assumptions · Forecast: ECMWF IFS 0.25° via Open-Meteo</footer>
         </aside>
       </section>
     </main>

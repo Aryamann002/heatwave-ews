@@ -59,7 +59,7 @@ function Login() {
             <li><span aria-hidden="true" />Human approval before any outbound action</li>
           </ul>
         </div>
-        <p className="auth-story-foot">Decision-support prototype · Not an official IMD warning</p>
+        <p className="auth-story-foot">HeatSafe AI · Human thermal stress</p>
       </section>
 
       <main className="auth-form-side" id="sign-in">

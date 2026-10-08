@@ -163,3 +163,8 @@
 - Changed the first-visit intro to remain visible for at least five seconds after it appears, then hand off once the landing document is ready. The skip control still closes it immediately.
 - Added a timed heat-wave ring sequence, a five-second progress line, and a visible countdown. Reduced-motion visitors get the same timing with a static graphic.
 - Verified the five-second handoff at desktop and phone widths in the local browser; the frontend production build passed. The intro remains skippable and appears only once per browser-tab session.
+
+## 2026-10-08 — public interface copy cleanup
+
+- Removed hackathon/prototype and non-official-warning labels from the loading screen, landing page, login page, and dashboard copy. The public UI now uses HeatSafe AI and thermal-stress terminology without suggesting institutional endorsement.
+- Preserved technical readiness metadata, source attribution, and repository safety/limitations documentation; those remain necessary for an auditable heat-risk system.

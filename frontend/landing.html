@@ -5,37 +5,18 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%23173e32%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%277%27 fill=%27%23e97824%27/%3E%3C/svg%3E" />
 <title>HeatSafe AI — Human Thermal Stress &amp; Heatwave Early Warning</title>
+<script>
+  try {
+    if (!sessionStorage.getItem("heatsafe-intro-seen")) document.documentElement.classList.add("heatsafe-intro-pending");
+  } catch (_) {
+    document.documentElement.classList.add("heatsafe-intro-pending");
+  }
+</script>
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&amp;family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<!-- Tailwind CSS -->
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<script id="tailwind-config">
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {},
-          borderRadius: {
-            "DEFAULT": "0.125rem",
-            "lg": "0.25rem",
-            "xl": "0.5rem",
-            "full": "0.75rem"
-          },
-          fontFamily: {
-            headline: ["Newsreader", "serif"],
-            display: ["Newsreader", "serif"],
-            body: ["DM Sans", "sans-serif"],
-            label: ["DM Sans", "sans-serif"],
-            serif: ["Newsreader", "serif"],
-            sans: ["DM Sans", "sans-serif"]
-          }
-        },
-      },
-    }
-  </script>
 <style>
     .material-symbols-outlined {
       font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
@@ -48,9 +29,108 @@
       background-size: 4px 1px;
       background-repeat: repeat-x;
     }
+    .heatsafe-intro { display: none; position: fixed; inset: 0; z-index: 1000; overflow: hidden; background: #142b23; color: #fbfcf7; }
+    .heatsafe-intro-pending .heatsafe-intro { display: block; }
+    .heatsafe-intro-pending body { overflow: hidden; }
+    .heatsafe-intro-layout { position: relative; display: grid; grid-template-rows: auto 1fr auto; min-height: 100vh; min-height: 100dvh; padding: clamp(24px, 4.5vw, 64px); isolation: isolate; }
+    .heatsafe-intro-top, .heatsafe-intro-bottom { display: flex; align-items: center; justify-content: space-between; gap: 24px; position: relative; z-index: 2; }
+    .heatsafe-intro-brand { display: inline-flex; align-items: center; gap: 12px; font: 600 20px/1.1 "Newsreader", Georgia, serif; letter-spacing: -.02em; }
+    .heatsafe-intro-brand-mark { width: 24px; height: 24px; border: 2px solid #e97824; border-radius: 50%; position: relative; }
+    .heatsafe-intro-brand-mark::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: #e97824; }
+    .heatsafe-intro-skip { border: 1px solid rgba(251,252,247,.48); border-radius: 4px; background: transparent; color: #fbfcf7; padding: 9px 14px; font: 600 12px/1 "DM Sans", sans-serif; cursor: pointer; }
+    .heatsafe-intro-skip:hover, .heatsafe-intro-skip:focus-visible { background: #fbfcf7; color: #142b23; outline: none; }
+    .heatsafe-intro-content { align-self: center; position: relative; z-index: 2; max-width: 720px; padding: 28px 0; }
+    .heatsafe-intro-title { margin: 0; font: 400 clamp(54px, 8vw, 112px)/.95 "Newsreader", Georgia, serif; letter-spacing: -.035em; text-wrap: balance; }
+    .heatsafe-intro-title em { font-weight: 300; color: #ffc391; }
+    .heatsafe-intro-description { margin: 28px 0 0; font: 400 clamp(15px, 1.4vw, 18px)/1.5 "DM Sans", sans-serif; color: #d2e0d5; }
+    .heatsafe-intro-progress { margin-top: 36px; width: min(270px, 70vw); height: 2px; overflow: hidden; background: rgba(251,252,247,.24); }
+    .heatsafe-intro-progress::after { content: ""; display: block; width: 42%; height: 100%; background: #e97824; animation: heatsafe-progress 1.35s cubic-bezier(.22,1,.36,1) infinite alternate; }
+    .heatsafe-intro-note { margin: 0; font: 500 11px/1.4 "DM Sans", sans-serif; letter-spacing: .09em; text-transform: uppercase; color: #c2d1c7; }
+    .heatsafe-intro-graphic { position: absolute; width: min(78vmin, 760px); aspect-ratio: 1; right: max(-17vmin, -160px); top: 50%; transform: translateY(-50%); opacity: .95; pointer-events: none; }
+    .heatsafe-intro-ring { position: absolute; inset: var(--inset); border: 1px solid rgba(225,238,222,.22); border-radius: 50%; animation: heatsafe-ring 2.8s ease-in-out infinite alternate; animation-delay: var(--delay); }
+    .heatsafe-intro-core { position: absolute; inset: 42%; border-radius: 50%; background: #e97824; }
+    .heatsafe-intro.is-leaving { opacity: 0; transform: translateY(-10px); transition: opacity .45s cubic-bezier(.22,1,.36,1), transform .45s cubic-bezier(.22,1,.36,1); pointer-events: none; }
+    @keyframes heatsafe-progress { from { transform: translateX(-100%); } to { transform: translateX(240%); } }
+    @keyframes heatsafe-ring { from { transform: scale(.975); opacity: .45; } to { transform: scale(1.025); opacity: 1; } }
+    @media (max-width: 700px) {
+      .heatsafe-intro-layout { padding: 28px 24px 32px; }
+      .heatsafe-intro-content { align-self: end; padding-bottom: 18vh; }
+      .heatsafe-intro-graphic { width: 92vmin; right: -39vmin; top: 35%; opacity: .55; }
+      .heatsafe-intro-bottom { align-items: flex-end; }
+      .heatsafe-intro-note { max-width: 180px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .heatsafe-intro-ring, .heatsafe-intro-progress::after { animation: none; }
+      .heatsafe-intro.is-leaving { transition: none; }
+    }
   </style>
 </head>
 <body class="bg-[#f4f5ef] text-[#14251f] font-sans antialiased min-h-screen selection:bg-[#173e32] selection:text-[#fbfcf7]">
+<div class="heatsafe-intro" id="heatsafe-intro" role="status" aria-live="polite" aria-label="Opening HeatSafe AI">
+  <div class="heatsafe-intro-layout">
+    <div class="heatsafe-intro-top">
+      <div class="heatsafe-intro-brand"><span class="heatsafe-intro-brand-mark" aria-hidden="true"></span>HeatSafe AI</div>
+      <button class="heatsafe-intro-skip" id="heatsafe-intro-skip" type="button">Skip intro</button>
+    </div>
+    <div class="heatsafe-intro-graphic" aria-hidden="true">
+      <span class="heatsafe-intro-ring" style="--inset: 0%; --delay: 0s"></span>
+      <span class="heatsafe-intro-ring" style="--inset: 13%; --delay: .12s"></span>
+      <span class="heatsafe-intro-ring" style="--inset: 26%; --delay: .24s"></span>
+      <span class="heatsafe-intro-ring" style="--inset: 36%; --delay: .36s"></span>
+      <span class="heatsafe-intro-core"></span>
+    </div>
+    <div class="heatsafe-intro-content">
+      <h1 class="heatsafe-intro-title">See the heat.<br/><em>Understand the risk.</em></h1>
+      <p class="heatsafe-intro-description">Opening your view of heat and human thermal stress.</p>
+      <div class="heatsafe-intro-progress" aria-hidden="true"></div>
+    </div>
+    <div class="heatsafe-intro-bottom"><p class="heatsafe-intro-note">Decision-support prototype</p><p class="heatsafe-intro-note">Not an official IMD warning</p></div>
+  </div>
+</div>
+<script>
+  (() => {
+    const intro = document.getElementById("heatsafe-intro");
+    if (!document.documentElement.classList.contains("heatsafe-intro-pending")) {
+      intro.remove();
+      return;
+    }
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const startedAt = performance.now();
+    let closed = false;
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      try { sessionStorage.setItem("heatsafe-intro-seen", "1"); } catch (_) { /* Storage is optional. */ }
+      intro.classList.add("is-leaving");
+      window.setTimeout(() => {
+        document.documentElement.classList.remove("heatsafe-intro-pending");
+        intro.remove();
+      }, reducedMotion ? 0 : 450);
+    };
+    document.getElementById("heatsafe-intro-skip").addEventListener("click", close);
+    document.addEventListener("DOMContentLoaded", () => {
+      window.setTimeout(close, reducedMotion ? 0 : Math.max(0, 900 - (performance.now() - startedAt)));
+    }, { once: true });
+  })();
+</script>
+<!-- Tailwind CSS loads behind the first-visit intro so the loader can paint first. -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {},
+          borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+          fontFamily: {
+            headline: ["Newsreader", "serif"], display: ["Newsreader", "serif"],
+            body: ["DM Sans", "sans-serif"], label: ["DM Sans", "sans-serif"],
+            serif: ["Newsreader", "serif"], sans: ["DM Sans", "sans-serif"]
+          }
+        },
+      },
+    }
+</script>
 <!-- 1. TOP BAR -->
 <header class="w-full bg-[#fbfcf7] border-b border-[#ccd4cc] px-6 lg:px-12 py-3.5 flex items-center justify-between sticky top-0 z-50">
 <div class="flex items-center gap-6">

@@ -151,3 +151,9 @@
 
 - Replaced the visible root interstitial with direct `/` landing-page serving in both local Vite development and the single-origin Render image. The old `index.html` now remains only as a non-visible fallback for explicit requests to that file.
 - Verification: local frontend production build passed; rebuilt the local Compose frontend and confirmed `GET /` returns the landing document with no redirect/interstitial text. Built the Render image and smoke-tested `GET /` there (HTTP 200, landing content, no interstitial).
+
+## 2026-10-08 — first-visit opening screen
+
+- Added a branded, responsive opening screen to the root landing page. It appears once per browser-tab session, can be skipped, respects reduced-motion preferences, and hands off to the landing page after its content is ready.
+- Verified the opening screen at desktop and phone widths, the skip action, and no repeat on refresh in the same tab. The frontend build passed.
+- The screen runs only after the server responds; it cannot display during a free Render instance's cold start before the first HTML response arrives.

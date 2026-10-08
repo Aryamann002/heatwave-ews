@@ -157,3 +157,9 @@
 - Added a branded, responsive opening screen to the root landing page. It appears once per browser-tab session, can be skipped, respects reduced-motion preferences, and hands off to the landing page after its content is ready.
 - Verified the opening screen at desktop and phone widths, the skip action, and no repeat on refresh in the same tab. The frontend build passed.
 - The screen runs only after the server responds; it cannot display during a free Render instance's cold start before the first HTML response arrives.
+
+## 2026-10-08 — five-second animated opening
+
+- Changed the first-visit intro to remain visible for at least five seconds after it appears, then hand off once the landing document is ready. The skip control still closes it immediately.
+- Added a timed heat-wave ring sequence, a five-second progress line, and a visible countdown. Reduced-motion visitors get the same timing with a static graphic.
+- Verified the five-second handoff at desktop and phone widths in the local browser; the frontend production build passed. The intro remains skippable and appears only once per browser-tab session.

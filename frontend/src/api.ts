@@ -1,4 +1,6 @@
-export const API = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+// The deployed Render image serves the UI and API from one origin. Local Vite
+// development talks to the Compose backend exposed on port 8543.
+export const API = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://localhost:8543" : "");
 
 export type DataStatus = { state: string; age_hours: number | null; banner: string; run_id: string | null };
 export type DistrictProps = { id?: string; name: string; state: string; climate_zone: string; boundary_vintage: string };
@@ -17,15 +19,15 @@ export type Forecast = { date: string; tmax_c: number; tmin_c: number; relative_
 export type Indices = { date: string; utci_c: number; utci_shade_c: number | null; utci_sun_c: number | null; stress_hours: number | null; htsi: number | null; wbgt_est_c: number; heat_index_c: number | null };
 export type Ward = { ward_id: string; name: string; population_estimate: number; data_vintage: string; source_url: string; licence: string; rank: number; geometry: GeoJSON.MultiPolygon };
 export type Vulnerability = { status: "available" | "unavailable"; data_vintage: string | null; items: Ward[] };
-export type User = { user_id: string; username: string; role: string };
-export type AuthConfig = { mode: "demo" | "strict"; production_ready: boolean; banner: string };
+export type User = { user_id: string; username: string; role: string; display_name?: string };
+export type AuthConfig = { mode: "demo" | "strict"; production_ready: boolean; banner: string; providers: ("google" | "github" | "microsoft")[]; email_registration: boolean };
 export type LoginResponse = { token: string; expires_in_seconds: number; user: User };
 export type WardOutlookItem = Ward & { district_alert_level: string; exposure_percentile: number; response_priority_score: number; response_priority: "routine" | "watch" | "high" | "urgent" };
 export type WardOutlook = { status: "available" | "unavailable"; meteorology_resolution: string; ward_meteorology_downscaled: false; basis: string; items: WardOutlookItem[] };
 export type HealthDataStatus = { status: "connected" | "awaiting_approved_data"; operational_health_model: false; absolute_outcome_forecast_enabled: false; message: string; rows: number; wards: number };
 export type HealthImpact = { status: string; warning: string; label: string; thermal_context: { stress_hours: number; utci_sun_c: number; utci_shade_c: number }; items: { ward_id: string; name: string; relative_risk_index: number; sensitivity_low: number; sensitivity_high: number; normalised_stress_score: number }[] };
 export type ReadinessGate = { id: string; label: string; status: "pass" | "partial" | "blocked"; detail?: string };
-export type Readiness = { product_status: string; official_imd_product: false; auth: AuthConfig; gates: ReadinessGate[]; provenance: { layer: string; source: string | string[]; kind: string; resolution?: string; vintage?: string; licence?: string; status?: string }[] };
+export type Readiness = { product_status: string; official_imd_product: false; auth: Pick<AuthConfig, "mode" | "production_ready" | "banner">; gates: ReadinessGate[]; provenance: { layer: string; source: string | string[]; kind: string; resolution?: string; vintage?: string; licence?: string; status?: string }[] };
 export type Advisory = { advisory_id: string; language: string; alert_level: string; text: string; status: string; approved_by: string | null; template_version: string };
 export type Task = { task_id: string; task_type: string; title: string; status: string; priority: string; ward_id: string | null; quantity: number | null; assigned_to: string | null; created_at: string };
 export type AuditEntry = { audit_id: string; user_id: string; action: string; entity_type: string; entity_id: string; new_value: unknown; created_at: string };
@@ -40,6 +42,7 @@ async function request<T>(method: string, path: string, body?: unknown, signal?:
   const response = await fetch(`${API}${path}`, {
     method,
     signal,
+    credentials: "include",
     headers: {
       ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -48,7 +51,7 @@ async function request<T>(method: string, path: string, body?: unknown, signal?:
   });
   if (!response.ok) {
     const detail = await response.json().then((json) => json.detail, () => undefined);
-    if (response.status === 401 && path !== "/auth/login") window.dispatchEvent(new Event("heatwatch-auth-required"));
+    if (response.status === 401 && path !== "/auth/login" && path !== "/auth/session") window.dispatchEvent(new Event("heatsafe-auth-required"));
     throw new Error(typeof detail === "string" ? detail : `${method} ${path} failed (${response.status})`);
   }
   return response.json() as Promise<T>;

@@ -135,3 +135,14 @@
 ## 2026-10-06 — project name confirmed
 
 - **Brand:** the project is **HeatSafe AI**. Updated visible dashboard and landing-page labels, API/CAP source labels, README and overview, and the free Render service names. Existing environment-variable keys, ruleset identifiers, and repository slug remain unchanged for compatibility.
+
+## 2026-10-06 — remaining legacy display title
+
+- Removed the old "Heatwave EWS" name from the browser tab title and generated evaluation-report headings. The running local image still required a rebuild at that point; internal repository, package and environment-variable identifiers remained unchanged.
+
+## 2026-10-08 — dedicated landing, sign-in and map flow
+
+- `/` now opens the landing page, which leads to `/login.html`; `/dashboard.html` waits for a valid signed session before loading map data. In strict mode, dashboard API data requires a valid session even when called directly.
+- Added server-side OAuth authorization-code/PKCE flows for Google, GitHub and Microsoft. The login page only enables providers with configured server-side credentials. New provider identities are viewer-only; no email-based privilege linking occurs.
+- Existing strict-mode credentials can use email-address usernames, seeded as viewer accounts. Public self-registration, password reset, MFA and live provider credentials remain out of scope and are documented as deployment gates.
+- The production frontend now uses the same-origin API; local Vite development targets Compose's port 8543. Frontend type/build and backend syntax checks passed. Full integration tests and the local Docker smoke run require Docker Desktop's Linux engine, which was unavailable during this update.

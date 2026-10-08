@@ -3,6 +3,7 @@
 import json
 import os
 import uuid
+from hashlib import sha256
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -11,8 +12,10 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 import psycopg
-from fastapi import Depends, FastAPI, HTTPException
+import requests
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 
@@ -20,6 +23,7 @@ from app.advisories import IST, AdvisoryDraft, draft_advisory, lint_advisory
 from app.auth import SessionIdentity, auth_mode, issue_session, public_auth_config, read_session, verify_password
 from app.districts import seed_districts
 from app.nl_query import QueryResult, process_nl_query
+from app.oauth import OAUTH_COOKIE, SESSION_COOKIE, authorization_url, client_credentials, configured_providers, exchange_identity, make_pending, public_base_url, read_pending, safe_next
 from app.repository import data_status, ensure_operational_tables, fetch_rows
 from indices.composite import load_weights
 from models.health_data import HealthObservationBatch
@@ -67,17 +71,18 @@ async def lifespan(_: FastAPI):
             ON CONFLICT (user_id) DO NOTHING
             """
         )
+        if auth_mode() == "strict":
+            supplied = json.loads(os.environ.get("HEATWATCH_USERS_JSON", "{}"))
+            if isinstance(supplied, dict):
+                for username in supplied:
+                    if username in {"viewer", "officer", "admin", "system"}:
+                        continue
+                    user_id = f"account-{sha256(username.encode()).hexdigest()[:24]}"
+                    cursor.execute("INSERT INTO users (user_id, username, role) VALUES (%s, %s, 'viewer') ON CONFLICT (username) DO NOTHING", (user_id, username))
     yield
 
 
 app = FastAPI(title="HeatSafe AI", version="0.1.0", lifespan=lifespan)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-)
-
 _bearer = HTTPBearer(auto_error=False)
 
 
@@ -86,13 +91,15 @@ def _database_url() -> str:
 
 
 def _current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ) -> SessionIdentity:
     """Return the signed-in database user and reject forged/stale identities."""
-    if credentials is None or credentials.scheme.lower() != "bearer":
+    token = credentials.credentials if credentials is not None and credentials.scheme.lower() == "bearer" else request.cookies.get(SESSION_COOKIE)
+    if not token:
         raise HTTPException(status_code=401, detail="Sign in before performing operational actions")
     try:
-        identity = read_session(credentials.credentials)
+        identity = read_session(token)
     except (ValueError, RuntimeError) as error:
         raise HTTPException(status_code=401, detail=str(error)) from error
     rows = fetch_rows(
@@ -103,6 +110,47 @@ def _current_user(
     if not rows or rows[0]["username"] != identity.username or rows[0]["role"] != identity.role:
         raise HTTPException(status_code=401, detail="Session identity no longer matches an active user")
     return identity
+
+
+def _cookie_secure(request: Request) -> bool:
+    # Reverse proxies may forward an internal HTTP scheme even for HTTPS users.
+    # Keep local HTTP development possible, but require Secure on public strict hosts.
+    return (
+        os.environ.get("PUBLIC_BASE_URL", "").startswith("https://")
+        or request.url.scheme == "https"
+        or (auth_mode() == "strict" and request.url.hostname not in {"localhost", "127.0.0.1"})
+    )
+
+
+def _app_origin(request: Request) -> str:
+    return os.environ.get("HEATSAFE_APP_URL", "").rstrip("/") or public_base_url(str(request.base_url))
+
+
+@app.middleware("http")
+async def protect_strict_dashboard_api(request: Request, call_next):
+    """Keep read-only map data behind authentication on public strict deployments."""
+    path = request.url.path
+    public = path.startswith(("/auth/", "/assets/", "/docs", "/openapi.json")) or path in {"/", "/health", "/landing.html", "/login.html", "/dashboard.html", "/favicon.ico"}
+    if auth_mode() == "strict" and not public and request.method != "OPTIONS":
+        header = request.headers.get("authorization", "")
+        token = header[7:] if header.lower().startswith("bearer ") else request.cookies.get(SESSION_COOKIE)
+        try:
+            identity = read_session(token or "")
+            rows = fetch_rows(_database_url(), "SELECT user_id FROM users WHERE user_id = %s AND username = %s AND role = %s", (identity.user_id, identity.username, identity.role))
+            if not rows:
+                raise ValueError("Account is no longer active")
+        except (ValueError, RuntimeError):
+            return Response(content=json.dumps({"detail": "Sign in to view the dashboard"}), status_code=401, media_type="application/json")
+    return await call_next(request)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 
 def require_roles(*roles: str):
@@ -125,13 +173,13 @@ def health() -> dict[str, str]:
 def get_auth_config() -> dict[str, Any]:
     """Return public authentication mode and deployment guidance."""
     try:
-        return public_auth_config()
+        return {**public_auth_config(), "providers": configured_providers(), "email_registration": False}
     except RuntimeError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
 
 
 @app.post("/auth/login")
-def login(request: LoginRequest) -> dict[str, Any]:
+def login(request: LoginRequest, response: Response, http_request: Request) -> dict[str, Any]:
     """Exchange environment-backed credentials for a signed eight-hour session."""
     try:
         valid = verify_password(request.username, request.password)
@@ -147,13 +195,68 @@ def login(request: LoginRequest) -> dict[str, Any]:
     if not rows:
         raise HTTPException(status_code=403, detail="Authenticated account is not provisioned in this deployment")
     identity = SessionIdentity(**rows[0])
-    return {"token": issue_session(identity), "expires_in_seconds": 8 * 60 * 60, "user": rows[0]}
+    token = issue_session(identity)
+    response.set_cookie(SESSION_COOKIE, token, max_age=8 * 60 * 60, httponly=True, secure=_cookie_secure(http_request), samesite="lax", path="/")
+    return {"token": token, "expires_in_seconds": 8 * 60 * 60, "user": rows[0]}
+
+
+@app.post("/auth/logout")
+def logout(response: Response) -> dict[str, bool]:
+    """Clear the browser's HttpOnly session cookie."""
+    response.delete_cookie(SESSION_COOKIE, path="/")
+    return {"signed_out": True}
+
+
+@app.get("/auth/oauth/{provider}/start")
+def oauth_start(provider: str, request: Request, next: str = "/dashboard.html") -> RedirectResponse:
+    """Begin a provider flow with CSRF state and PKCE in a signed cookie."""
+    if client_credentials(provider) is None:
+        raise HTTPException(status_code=404, detail="Sign-in provider is not configured")
+    try:
+        base = public_base_url(str(request.base_url))
+        pending, state, challenge = make_pending(provider, next)
+        url = authorization_url(provider, f"{base}/auth/oauth/{provider}/callback", state, challenge)
+    except ValueError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    response = RedirectResponse(url, status_code=302)
+    response.set_cookie(OAUTH_COOKIE, pending, max_age=10 * 60, httponly=True, secure=_cookie_secure(request), samesite="lax", path="/auth/oauth")
+    return response
+
+
+@app.get("/auth/oauth/{provider}/callback")
+def oauth_callback(provider: str, request: Request, code: str = "", state: str = "", error: str = "") -> RedirectResponse:
+    """Complete social sign-in and provision only a read-only viewer identity."""
+    if provider not in configured_providers():
+        raise HTTPException(status_code=404, detail="Sign-in provider is not configured")
+    if error or not code or not state:
+        return RedirectResponse(f"{_app_origin(request)}/login.html?error=provider_denied", status_code=303)
+    try:
+        pending = read_pending(request.cookies.get(OAUTH_COOKIE, ""), provider, state)
+        base = public_base_url(str(request.base_url))
+        subject, label = exchange_identity(provider, code, pending["verifier"], f"{base}/auth/oauth/{provider}/callback")
+        with psycopg.connect(_database_url()) as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT u.user_id, u.username, u.role FROM oauth_identities i JOIN users u ON u.user_id = i.user_id WHERE i.provider = %s AND i.provider_subject = %s", (provider, subject))
+            row = cursor.fetchone()
+            if row is None:
+                user_id = f"oauth-{uuid.uuid4()}"
+                username = f"{provider}:{sha256(subject.encode()).hexdigest()[:20]}"
+                cursor.execute("INSERT INTO users (user_id, username, role) VALUES (%s, %s, 'viewer')", (user_id, username))
+                cursor.execute("INSERT INTO oauth_identities (provider, provider_subject, user_id, display_label) VALUES (%s, %s, %s, %s)", (provider, subject, user_id, label))
+                row = (user_id, username, "viewer")
+        identity = SessionIdentity(*row)
+        response = RedirectResponse(f"{_app_origin(request)}{safe_next(pending['next'])}", status_code=303)
+        response.set_cookie(SESSION_COOKIE, issue_session(identity), max_age=8 * 60 * 60, httponly=True, secure=_cookie_secure(request), samesite="lax", path="/")
+        response.delete_cookie(OAUTH_COOKIE, path="/auth/oauth")
+        return response
+    except (ValueError, requests.RequestException, psycopg.Error):
+        return RedirectResponse(f"{_app_origin(request)}/login.html?error=provider_failed", status_code=303)
 
 
 @app.get("/auth/session")
 def session(identity: SessionIdentity = Depends(_current_user)) -> dict[str, Any]:
     """Return the current authenticated identity."""
-    return {"user_id": identity.user_id, "username": identity.username, "role": identity.role}
+    labels = fetch_rows(_database_url(), "SELECT display_label FROM oauth_identities WHERE user_id = %s LIMIT 1", (identity.user_id,))
+    return {"user_id": identity.user_id, "username": identity.username, "role": identity.role, "display_name": labels[0]["display_label"] if labels else identity.username}
 
 
 @app.get("/model-card")

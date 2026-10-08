@@ -17,7 +17,7 @@ def _format(value: object) -> str:
 
 
 def _missing_report(reason: str) -> str:
-    return f"""# Heatwave EWS evaluation report
+    return f"""# HeatSafe AI evaluation report
 
 **Skill status: Not established.** {reason}
 
@@ -56,7 +56,7 @@ def _render_report(evaluation: dict[str, Any], case_study: dict[str, Any]) -> st
     else:
         conclusion = "The classifier does not beat the supplied baseline in every reported group; no tuning against held-out years was performed."
     sample_ids = case_study.get("sample_ids", [])
-    return f"""# Heatwave EWS evaluation report
+    return f"""# HeatSafe AI evaluation report
 
 **Skill status:** Evaluated only on the supplied, checksummed input. {conclusion}
 
@@ -122,7 +122,7 @@ def generate_report(input_path: Path, output_dir: Path) -> list[Path]:
     markdown_path, html_path = output_dir / "evaluation.md", output_dir / "evaluation.html"
     markdown_path.write_text(markdown, encoding="utf-8")
     html_path.write_text(
-        "<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><title>Heatwave EWS evaluation</title>"
+        "<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><title>HeatSafe AI evaluation</title>"
         f"<body><pre>{escape(markdown)}</pre></body></html>\n",
         encoding="utf-8",
     )

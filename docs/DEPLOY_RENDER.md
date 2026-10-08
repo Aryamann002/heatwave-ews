@@ -16,7 +16,7 @@ This is a **temporary presentation deployment**, not an operational warning serv
 2. Create a **Blueprint** from that file. Check that the preview shows only a **free web service** and **free Postgres**. Do not accept an unexpected paid plan.
 3. When prompted for `HEATWATCH_USERS_JSON`, enter a private JSON map for one or more provisioned usernames: `viewer`, `officer`, or `admin`. Use unique strong passwords. Do **not** paste them into GitHub, chat, or a committed `.env`.
 4. Confirm the generated session secret, `AUTH_MODE=strict`, `CAP_STATUS=Test`, and private Postgres access. Keep `GROQ_API_KEY` unset unless you intentionally configure it as a private environment variable.
-5. Wait for the build and first deploy, then open the service's HTTPS URL. Check `/health`, `/readiness`, `/auth/config`, and the landing dashboard. `/auth/config` must report strict mode.
+5. Wait for the build and first deploy, then open the service's HTTPS URL. `/` must lead to the public landing page, `/login.html` to the sign-in portal, and `/dashboard.html` must require an authenticated session. Check `/health`, `/readiness`, and `/auth/config`; the latter must report strict mode. An unauthenticated `/districts` request must return 401.
 6. Select a bundled historical replay for a deterministic walkthrough. The **live forecast** view is expected to show a blocked/unavailable state until a separate, explicitly authorized data-refresh arrangement exists.
 
 ## Verification checklist
@@ -28,6 +28,16 @@ This is a **temporary presentation deployment**, not an operational warning serv
 - A stale/missing live forecast does not appear as a current green alert.
 
 If the container fails during startup, inspect Render logs for database provisioning/PostGIS errors or memory exhaustion. Do not switch to demo authentication or disable quality gates to make the deploy appear healthy.
+
+## Optional Google, GitHub and Microsoft sign-in
+
+Social buttons are intentionally disabled until a provider is configured. After Render assigns the final HTTPS URL, set `PUBLIC_BASE_URL` to that exact origin (for example `https://heatsafe-ai-demo.onrender.com` if that is the assigned URL). Register these callback URLs with the corresponding provider, then add the matching client ID and client secret as **private Render environment variables**:
+
+- Google: `/auth/oauth/google/callback`, `HEATSAFE_GOOGLE_CLIENT_ID` and `HEATSAFE_GOOGLE_CLIENT_SECRET`.
+- GitHub: `/auth/oauth/github/callback`, `HEATSAFE_GITHUB_CLIENT_ID` and `HEATSAFE_GITHUB_CLIENT_SECRET`.
+- Microsoft: `/auth/oauth/microsoft/callback`, `HEATSAFE_MICROSOFT_CLIENT_ID` and `HEATSAFE_MICROSOFT_CLIENT_SECRET`. Register a web app that accepts the account types you intend to permit.
+
+Do not put these secrets in Git, `.env.example`, browser-side variables, or chat. New provider identities receive viewer access only; matching email text never grants officer/admin rights. The provider setup and end-to-end sign-in have not been verified with live credentials yet. Existing email/password access is provisioned with private `HEATWATCH_USERS_JSON` entries; email keys are seeded as viewer accounts. There is no public self-registration or password-reset service in this demo.
 
 ## What a persistent live deployment would require
 

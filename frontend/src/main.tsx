@@ -32,10 +32,9 @@ function QueryBox() {
   );
 }
 
-function App() {
+function App({ user }: { user: User }) {
   const [districts, setDistricts] = useState<DistrictCollection | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [selectedId, setSelectedId] = useState("");
   const [dayIndex, setDayIndex] = useState(0);
   const [layer, setLayer] = useState<LayerKey>("level");
@@ -111,7 +110,7 @@ function App() {
       <header className="topbar">
         <a className="brand" href="/landing.html"><h1>HeatSafe AI</h1><p>Impact-led heat action support</p></a>
         <QueryBox />
-        <AuthPanel user={user} onSession={setUser} />
+        <AuthPanel user={user} />
       </header>
       {readiness?.auth.mode === "demo" && <div className="auth-banner" role="status">{readiness.auth.banner} Operational actions still require a signed session.</div>}
       {replayId ? (
@@ -187,4 +186,15 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
+function AuthenticatedApp() {
+  const [user, setUser] = useState<User | null>(null);
+  useEffect(() => {
+    const redirect = () => window.location.replace(`/login.html?next=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`);
+    getJson<User>("/auth/session").then(setUser, redirect);
+    window.addEventListener("heatsafe-auth-required", redirect);
+    return () => window.removeEventListener("heatsafe-auth-required", redirect);
+  }, []);
+  return user ? <App user={user} /> : <div className="auth-loading" role="status">Checking your HeatSafe AI session…</div>;
+}
+
+createRoot(document.getElementById("root")!).render(<StrictMode><AuthenticatedApp /></StrictMode>);

@@ -1,2 +1,2 @@
-"""Heatwave EWS backend package."""
+"""HeatSafe AI backend package."""
 

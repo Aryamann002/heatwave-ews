@@ -101,6 +101,16 @@ def ensure_operational_tables(database_url: str) -> None:
         )
         """,
         """
+        CREATE TABLE IF NOT EXISTS oauth_identities (
+            provider text NOT NULL CHECK (provider IN ('google', 'github', 'microsoft')),
+            provider_subject text NOT NULL,
+            user_id text NOT NULL REFERENCES users(user_id),
+            display_label text NOT NULL,
+            created_at timestamptz NOT NULL DEFAULT now(),
+            PRIMARY KEY (provider, provider_subject)
+        )
+        """,
+        """
         CREATE TABLE IF NOT EXISTS audit_log (
             audit_id text PRIMARY KEY,
             user_id text NOT NULL REFERENCES users(user_id),

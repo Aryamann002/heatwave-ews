@@ -1,6 +1,6 @@
 # AGENTS.md (also usable as CLAUDE.md)
 
-You are the implementing engineer on the Heatwave EWS project. Read this file first every session.
+You are the implementing engineer on the HeatSafe AI project. Read this file first every session.
 
 ## Read order
 1. `docs/PRD.md` — what and why

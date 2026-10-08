@@ -146,3 +146,8 @@
 - Added server-side OAuth authorization-code/PKCE flows for Google, GitHub and Microsoft. The login page only enables providers with configured server-side credentials. New provider identities are viewer-only; no email-based privilege linking occurs.
 - Existing strict-mode credentials can use email-address usernames, seeded as viewer accounts. Public self-registration, password reset, MFA and live provider credentials remain out of scope and are documented as deployment gates.
 - The production frontend now uses the same-origin API; local Vite development targets Compose's port 8543. Frontend type/build and backend syntax checks passed. Full integration tests and the local Docker smoke run require Docker Desktop's Linux engine, which was unavailable during this update.
+
+## 2026-10-08 — landing page served directly at root
+
+- Replaced the visible root interstitial with direct `/` landing-page serving in both local Vite development and the single-origin Render image. The old `index.html` now remains only as a non-visible fallback for explicit requests to that file.
+- Verification: local frontend production build passed; rebuilt the local Compose frontend and confirmed `GET /` returns the landing document with no redirect/interstitial text. Built the Render image and smoke-tested `GET /` there (HTTP 200, landing content, no interstitial).

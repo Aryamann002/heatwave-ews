@@ -6,6 +6,17 @@ import { resolve } from "node:path";
 // leaves the worker behind (HTTP 404), so GeoJSON layers never render. Serve it from the package.
 export default defineConfig({
   optimizeDeps: { exclude: ["maplibre-gl"] },
+  plugins: [{
+    name: "heatsafe-landing-at-root",
+    configureServer(server) {
+      server.middlewares.use((request, _response, next) => {
+        if (request.url === "/" || request.url?.startsWith("/?")) {
+          request.url = `/landing.html${request.url.slice(1)}`;
+        }
+        next();
+      });
+    },
+  }],
   build: { rolldownOptions: { input: {
     index: resolve(import.meta.dirname, "index.html"),
     landing: resolve(import.meta.dirname, "landing.html"),

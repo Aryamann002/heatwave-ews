@@ -15,7 +15,7 @@ import psycopg
 import requests
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 
@@ -1548,4 +1548,9 @@ def get_replay(scenario_id: str) -> dict[str, Any]:
 # its separate Vite service, so this mount is absent there.
 _frontend_dist = Path("frontend_dist")
 if _frontend_dist.is_dir():
+    @app.get("/", include_in_schema=False)
+    def landing_page() -> FileResponse:
+        """Serve the landing page at the public root without an interstitial."""
+        return FileResponse(_frontend_dist / "landing.html")
+
     app.mount("/", StaticFiles(directory=_frontend_dist, html=True), name="frontend")

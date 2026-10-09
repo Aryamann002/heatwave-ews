@@ -5,9 +5,20 @@ The scheduled GitHub Actions runner fetches Open-Meteo's seven-day forecast **ou
 ## One-time setup
 
 1. Deploy the branch containing `backend/app/forecast_upload.py`, `backend/app/main.py`, `scripts/preload_forecast.py`, and `.github/workflows/preload-forecast.yml` to the **HeatSafe AI web service**. Do not set the upload token until this code is deployed.
-2. Generate one cryptographically random 48-byte secret locally. In PowerShell, run `$token = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(48))`. Do not print the value, paste it in chat, or commit it.
-3. In Render, open the HeatSafe AI web service → **Environment** → **Add Environment Variable**. Set the key `HEATSAFE_FORECAST_UPLOAD_TOKEN` and paste `$token` as the value. Save and deploy. The token is only for forecast upload/status; it does not grant account or database administration. With it set, visitor-triggered Open-Meteo fetching is disabled, preventing more Render-side 429s.
-4. In the fork `GhxstOSINT/heatwave-ews`, open **Settings → Secrets and variables → Actions → New repository secret**. Create `HEATSAFE_FORECAST_UPLOAD_TOKEN` with the **same** `$token` value. Keep the value only in the two secret stores. Clear the PowerShell variable after both are saved with `Remove-Variable token`.
+2. Generate one cryptographically random 48-byte secret locally. In Windows PowerShell, run:
+
+   ```powershell
+   $bytes = New-Object byte[] 48
+   $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+   $rng.GetBytes($bytes)
+   $rng.Dispose()
+   $token = ([BitConverter]::ToString($bytes)).Replace('-', '')
+   Set-Clipboard -Value $token
+   ```
+
+   Do not print the value, paste it in chat, or commit it. Do not regenerate it between the Render and GitHub entries.
+3. In Render, open the HeatSafe AI web service → **Environment** → **Add Environment Variable**. Set the key `HEATSAFE_FORECAST_UPLOAD_TOKEN` and paste the clipboard value. Save and deploy. The token is only for forecast upload/status; it does not grant account or database administration. With it set, visitor-triggered Open-Meteo fetching is disabled, preventing more Render-side 429s.
+4. In the fork `GhxstOSINT/heatwave-ews`, open **Settings → Secrets and variables → Actions → New repository secret**. Create `HEATSAFE_FORECAST_UPLOAD_TOKEN` with the **same** clipboard value. Keep the value only in the two secret stores. Clear the PowerShell variable and clipboard after both are saved with `Remove-Variable token` and `Set-Clipboard -Value ''`.
 5. Merge the branch into the fork's **default branch** (or make this branch the default). GitHub scheduled workflows run only from the default branch. In the fork's **Actions** tab, enable Actions and the **Preload seven-day forecast** workflow if prompted. Choose **Run workflow** for an immediate test. A successful log ends with `Fresh seven-day forecast is ready` and a run ID.
 
 The GitHub workflow runs at **00:23, 06:23, 12:23 and 18:23 UTC** (05:53, 11:53, 17:53 and 23:53 IST). It also supports manual runs. Its token-protected verification checks seven dates, 641 districts, and 4,487 alert rows before reporting success.

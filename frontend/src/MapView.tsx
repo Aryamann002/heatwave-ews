@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
-import { GeoJSONSource, Map as MapLibreMap, NavigationControl, Popup } from "maplibre-gl";
+import { GeoJSONSource, Map as MapLibreMap, NavigationControl, Popup, setWorkerUrl } from "maplibre-gl";
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { DistrictCollection, LAYERS, LayerKey, LEVEL_COLOUR, OverviewRow, Ward, fmt } from "./api";
+
+setWorkerUrl(workerUrl);
 
 type Bounds = [[number, number], [number, number]];
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };

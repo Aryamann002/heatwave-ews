@@ -34,6 +34,8 @@ jobs:
       - run: pip install -r requirements.lock
       # The backend reads config/ relative to its own directory (the Dockerfile copies it in).
       - run: cp -r ../config ./config
+      # Startup and health-data tests validate the pinned CSV reference snapshots.
+      - run: mkdir -p data && cp -r ../data/reference ./data/
       - run: python -m unittest discover -s tests
       - run: python -m compileall -q .
 

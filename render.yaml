@@ -18,6 +18,8 @@ services:
         value: strict
       - key: HEATSAFE_ALLOW_SIGNUP
         value: "true"
+      - key: HEATSAFE_AUTO_INGEST
+        value: "true"
       - key: HEATWATCH_SESSION_SECRET
         generateValue: true
       - key: HEATWATCH_USERS_JSON

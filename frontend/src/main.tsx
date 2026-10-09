@@ -2,7 +2,7 @@ import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./styles.css";
-import { DistrictCollection, LAYERS, LayerKey, Overview, OverviewRow, Readiness, Replay, Scenario, User, Vulnerability, getJson, rank, send, shortDate } from "./api";
+import { DistrictCollection, ForecastRefresh, LAYERS, LayerKey, Overview, OverviewRow, Readiness, Replay, Scenario, User, Vulnerability, getJson, rank, send, shortDate } from "./api";
 import { AuthPanel } from "./AuthPanel";
 import { MapView } from "./MapView";
 import { DistrictPanel } from "./DistrictPanel";
@@ -40,6 +40,7 @@ function App({ user }: { user: User }) {
   const [layer, setLayer] = useState<LayerKey>("level");
   const [vulnerability, setVulnerability] = useState<Vulnerability | null>(null);
   const [loadError, setLoadError] = useState("");
+  const [refresh, setRefresh] = useState<ForecastRefresh | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   // Landing-page links open a replay directly: /?replay=<scenario id>
@@ -66,10 +67,23 @@ function App({ user }: { user: User }) {
 
   useEffect(() => {
     const load = () => getJson<Overview>("/overview").then((value) => { setOverview(value); setLoadError(""); }, (error: Error) => setLoadError(error.message));
+    const requestRefresh = () => send<ForecastRefresh>("POST", "/forecast-refresh").then(setRefresh, () => undefined);
     load();
-    const timer = window.setInterval(() => { load(); setRefreshKey((key) => key + 1); }, REFRESH_MS);
+    requestRefresh();
+    const timer = window.setInterval(() => { load(); requestRefresh(); setRefreshKey((key) => key + 1); }, REFRESH_MS);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (refresh?.state !== "running") return;
+    const timer = window.setInterval(() => {
+      getJson<ForecastRefresh>("/forecast-refresh/status").then((value) => {
+        setRefresh(value);
+        if (value.state !== "running") getJson<Overview>("/overview").then(setOverview, () => undefined);
+      }, () => undefined);
+    }, 10_000);
+    return () => window.clearInterval(timer);
+  }, [refresh?.state]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -121,7 +135,7 @@ function App({ user }: { user: User }) {
         </div>
       ) : <div className={`status-banner ${loadError ? "unavailable" : status?.state ?? "loading"}`} role="status">
         <strong>{loadError ? "SERVICE UNREACHABLE" : !status ? "LOADING" : status.state === "current" ? "DATA CURRENT" : "ALERTS BLOCKED"}</strong>
-        <span>{loadError || status?.banner || "Connecting to forecast service…"}</span>
+        <span>{loadError || (refresh?.state === "running" ? `${status?.banner ?? "No forecast available yet."} ${refresh.message}` : refresh?.state === "failed" ? `${status?.banner ?? "Forecast unavailable."} ${refresh.message}` : status?.banner || "Connecting to forecast service…")}</span>
         <span className="counts">{(["red", "orange", "yellow", "green"] as const).map((level) => counts[level] ? <b key={level} className={`count ${level}`}>{counts[level]} {level}</b> : null)}</span>
         {status?.run_id && <code>{status.run_id}</code>}
       </div>}

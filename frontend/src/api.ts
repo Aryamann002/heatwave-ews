@@ -13,6 +13,7 @@ export type ReplayRow = OverviewRow & Alert & Forecast & Indices;
 export type Scenario = { id: string; title: string; start: string; end: string; context: string };
 export type Replay = Scenario & { mode: "replay"; source: string; note: string; items: ReplayRow[] };
 export type Overview = { data_status: DataStatus; emission_blocked: boolean; items: OverviewRow[] };
+export type ForecastRefresh = { state: "disabled" | "idle" | "running" | "succeeded" | "failed"; message: string; started_at?: string | null; finished_at?: string | null; detail?: string | null };
 export type Alert = { date: string; level: string; track1_level: string; track2_level: string; disagreement: boolean; reasoning: string[]; rule_version: string };
 export type AlertResponse = { data_status: DataStatus; emission_blocked: boolean; items: Alert[] };
 export type Forecast = { date: string; tmax_c: number; tmin_c: number; relative_humidity_pct: number; wind_speed_m_s: number; normal_tmax_c: number | null; departure_c: number | null };

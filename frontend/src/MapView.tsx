@@ -83,6 +83,8 @@ export function MapView({ districts, rows, layer, selectedId, wards, onSelect }:
       },
     });
     map.current = instance;
+    const resizeObserver = new ResizeObserver(() => instance.resize());
+    resizeObserver.observe(node.current);
     instance.addControl(new NavigationControl({ showCompass: false }), "top-right");
     const popup = new Popup({ closeButton: false, closeOnClick: false, offset: 8 });
     instance.on("load", () => {
@@ -112,7 +114,7 @@ export function MapView({ districts, rows, layer, selectedId, wards, onSelect }:
       ready.current = true;
       sync();
     });
-    return () => { instance.remove(); map.current = null; ready.current = false; };
+    return () => { resizeObserver.disconnect(); instance.remove(); map.current = null; ready.current = false; };
   }, []);
 
   useEffect(sync);

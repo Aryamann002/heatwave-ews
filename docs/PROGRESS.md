@@ -174,3 +174,9 @@
 - Added a HeatSafe AI sign-up page linked from sign-in, plus `POST /auth/register`. Registration is explicitly enabled for strict-mode deployments with `HEATSAFE_ALLOW_SIGNUP=true` (set by the Render Blueprint). New accounts are always viewers and use salted scrypt password hashes in Postgres; successful registration starts a normal eight-hour session.
 - Registration email ownership is not verified, and password reset/account recovery, account lockout, and institutional identity checks remain unavailable. Do not treat self-registered accounts as trusted officers.
 - Verified the frontend production build, authentication unit tests, and a database-backed registration/login test against local Postgres. The local UI was opened at desktop width; this Compose instance remains in demo mode, where sign-up is intentionally disabled. Render deployment still needs end-to-end verification.
+
+## 2026-10-09 — map visibility and on-demand forecast refresh
+
+- Fixed the MapLibre CSS collision that collapsed the map canvas; the district map now fills its container and resizes with the layout.
+- Added an opt-in, database-gated forecast refresh initiated by an authenticated dashboard visit. The existing Open-Meteo/QC/alert pipeline runs in the web process without a paid cron service, with 20-minute failure retry and six-hour success cooldown. Missing, stale, and failed data remain blocked until a complete valid run is stored.
+- The dashboard now reports refresh progress. This free-tier behavior is demand-driven, not a guarantee of continuous updates while Render sleeps.

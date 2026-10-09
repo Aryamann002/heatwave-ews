@@ -23,6 +23,7 @@ from fastapi.staticfiles import StaticFiles
 from app.advisories import IST, AdvisoryDraft, draft_advisory, lint_advisory
 from app.auth import SessionIdentity, auth_mode, hash_registered_password, issue_session, public_auth_config, read_session, registration_enabled, verify_password, verify_registered_password
 from app.districts import seed_districts
+from app.forecast_refresh import refresh_status, start_if_due
 from app.nl_query import QueryResult, process_nl_query
 from app.oauth import OAUTH_COOKIE, SESSION_COOKIE, authorization_url, client_credentials, configured_providers, exchange_identity, make_pending, public_base_url, read_pending, safe_next
 from app.repository import data_status, ensure_operational_tables, fetch_rows
@@ -392,6 +393,18 @@ def get_overview() -> dict[str, Any]:
         for row in rows:
             row["level"] = row["track1_level"] = row["track2_level"] = None
     return {"data_status": status, "emission_blocked": status["state"] != "current", "items": rows}
+
+
+@app.get("/forecast-refresh/status")
+def get_forecast_refresh_status(_: SessionIdentity = Depends(_current_user)) -> dict[str, Any]:
+    """Show whether an automatic forecast cycle is running or awaiting retry."""
+    return refresh_status(_database_url())
+
+
+@app.post("/forecast-refresh")
+def request_forecast_refresh(_: SessionIdentity = Depends(_current_user)) -> dict[str, Any]:
+    """Start a due cycle in the web process without blocking the dashboard."""
+    return start_if_due(_database_url())
 
 
 @app.get("/alerts/{district_id}")

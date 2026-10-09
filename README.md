@@ -114,6 +114,7 @@ Copy [.env.example](.env.example) to an untracked `.env`. Do not commit secrets.
 | `HEATWATCH_SESSION_SECRET` | Required in strict mode, at least 32 random characters |
 | `HEATWATCH_USERS_JSON` | Strict-mode username/password map supplied privately; `viewer`, `officer`, `admin`, or email-address keys for viewer accounts |
 | `HEATSAFE_ALLOW_SIGNUP` | `true` to allow public viewer-only email/password registration in strict mode; otherwise disabled |
+| `HEATSAFE_AUTO_INGEST` | `true` to refresh a missing or six-hour-old forecast when an authenticated dashboard is opened; no wall-clock scheduler |
 | `PUBLIC_BASE_URL` | Exact HTTPS origin of the deployed backend; required before enabling any OAuth provider |
 | `HEATSAFE_GOOGLE_CLIENT_ID`, `HEATSAFE_GOOGLE_CLIENT_SECRET` | Optional Google web OAuth application credentials |
 | `HEATSAFE_GITHUB_CLIENT_ID`, `HEATSAFE_GITHUB_CLIENT_SECRET` | Optional GitHub OAuth application credentials |

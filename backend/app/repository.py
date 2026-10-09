@@ -20,6 +20,16 @@ def ensure_operational_tables(database_url: str) -> None:
         )
         """,
         """
+        CREATE TABLE IF NOT EXISTS forecast_refresh_state (
+            id integer PRIMARY KEY CHECK (id = 1),
+            state text NOT NULL CHECK (state IN ('idle', 'running', 'succeeded', 'failed')),
+            started_at timestamptz,
+            finished_at timestamptz,
+            next_attempt_at timestamptz NOT NULL DEFAULT '-infinity',
+            detail text
+        )
+        """,
+        """
         CREATE TABLE IF NOT EXISTS forecast_daily (
             district_id text REFERENCES districts(id), forecast_date date NOT NULL,
             run_id text REFERENCES model_runs(run_id), tmax_c double precision NOT NULL,
@@ -211,6 +221,7 @@ def ensure_operational_tables(database_url: str) -> None:
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
         for statement in statements:
             cursor.execute(statement)
+        cursor.execute("INSERT INTO forecast_refresh_state (id, state) VALUES (1, 'idle') ON CONFLICT (id) DO NOTHING")
         cursor.execute("ALTER TABLE thermal_indices ALTER COLUMN heat_index_c DROP NOT NULL")
         cursor.execute("ALTER TABLE thermal_indices ADD COLUMN IF NOT EXISTS utci_shade_c double precision")
         cursor.execute("ALTER TABLE thermal_indices ADD COLUMN IF NOT EXISTS utci_sun_c double precision")

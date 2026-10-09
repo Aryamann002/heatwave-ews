@@ -1,8 +1,10 @@
 """HeatSafe AI HTTP API."""
 
 import json
+import hmac
 import os
 import re
+import shutil
 import uuid
 from hashlib import sha256
 from contextlib import asynccontextmanager
@@ -23,7 +25,8 @@ from fastapi.staticfiles import StaticFiles
 from app.advisories import IST, AdvisoryDraft, draft_advisory, lint_advisory
 from app.auth import SessionIdentity, auth_mode, hash_registered_password, issue_session, public_auth_config, read_session, registration_enabled, verify_password, verify_registered_password
 from app.districts import seed_districts
-from app.forecast_refresh import refresh_status, start_if_due
+from app.forecast_refresh import refresh_status, start_if_due, start_uploaded
+from app.forecast_upload import MAX_COMPRESSED_BYTES, stage_bundle
 from app.nl_query import QueryResult, process_nl_query
 from app.oauth import OAUTH_COOKIE, SESSION_COOKIE, authorization_url, client_credentials, configured_providers, exchange_identity, make_pending, public_base_url, read_pending, safe_next
 from app.repository import data_status, ensure_operational_tables, fetch_rows
@@ -405,6 +408,39 @@ def get_forecast_refresh_status(_: SessionIdentity = Depends(_current_user)) -> 
 def request_forecast_refresh(_: SessionIdentity = Depends(_current_user)) -> dict[str, Any]:
     """Start a due cycle in the web process without blocking the dashboard."""
     return start_if_due(_database_url())
+
+
+def _require_forecast_upload_token(request: Request) -> None:
+    configured = os.environ.get("HEATSAFE_FORECAST_UPLOAD_TOKEN", "")
+    supplied = request.headers.get("Authorization", "").removeprefix("Bearer ")
+    if len(configured) < 32 or not hmac.compare_digest(supplied, configured):
+        raise HTTPException(status_code=401, detail="Forecast upload is not authorized")
+
+
+@app.get("/forecast-upload/status")
+def uploaded_forecast_status(request: Request) -> dict[str, Any]:
+    _require_forecast_upload_token(request)
+    return refresh_status(_database_url())
+
+
+@app.post("/forecast-upload")
+async def upload_forecast(request: Request) -> dict[str, Any]:
+    """Accept a small, fully checked raw forecast from the scheduled runner."""
+    _require_forecast_upload_token(request)
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > MAX_COMPRESSED_BYTES:
+            raise HTTPException(status_code=413, detail="Forecast bundle is too large")
+    try:
+        run_time, root = stage_bundle(bytes(body))
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    try:
+        return start_uploaded(_database_url(), run_time, root)
+    except Exception:
+        shutil.rmtree(root, ignore_errors=True)
+        raise
 
 
 @app.get("/alerts/{district_id}")

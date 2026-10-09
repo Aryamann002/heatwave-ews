@@ -114,7 +114,8 @@ Copy [.env.example](.env.example) to an untracked `.env`. Do not commit secrets.
 | `HEATWATCH_SESSION_SECRET` | Required in strict mode, at least 32 random characters |
 | `HEATWATCH_USERS_JSON` | Strict-mode username/password map supplied privately; `viewer`, `officer`, `admin`, or email-address keys for viewer accounts |
 | `HEATSAFE_ALLOW_SIGNUP` | `true` to allow public viewer-only email/password registration in strict mode; otherwise disabled |
-| `HEATSAFE_AUTO_INGEST` | `true` to refresh a missing or six-hour-old forecast when an authenticated dashboard is opened; no wall-clock scheduler |
+| `HEATSAFE_AUTO_INGEST` | `true` to refresh a missing or six-hour-old forecast when an authenticated dashboard is opened; automatically suppressed when a forecast-upload token is configured |
+| `HEATSAFE_FORECAST_UPLOAD_TOKEN` | Optional 32+ character private token for off-Render forecast preload; configure the same value as a GitHub Actions secret, never in Git |
 | `PUBLIC_BASE_URL` | Exact HTTPS origin of the deployed backend; required before enabling any OAuth provider |
 | `HEATSAFE_GOOGLE_CLIENT_ID`, `HEATSAFE_GOOGLE_CLIENT_SECRET` | Optional Google web OAuth application credentials |
 | `HEATSAFE_GITHUB_CLIENT_ID`, `HEATSAFE_GITHUB_CLIENT_SECRET` | Optional GitHub OAuth application credentials |
@@ -124,7 +125,7 @@ Copy [.env.example](.env.example) to an untracked `.env`. Do not commit secrets.
 | `ALLOW_UNPINNED_POPULATION` | Leave `0` unless deliberately accepting a different raster checksum |
 | `CDSAPI_URL`, `CDSAPI_KEY` | Only for rebuilding Copernicus normals after accepting the dataset terms |
 
-The current Docker Compose file is a **local development/demo** topology. It should not be published unchanged. Render deployment preparation and its remaining manual connection/secrets steps are documented in [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md).
+The current Docker Compose file is a **local development/demo** topology. It should not be published unchanged. Render deployment preparation and its remaining manual connection/secrets steps are documented in [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md). The free off-Render six-hour forecast preload is documented in [docs/PRELOAD_FREE_SCHEDULE.md](docs/PRELOAD_FREE_SCHEDULE.md); scheduled runs require the workflow on the fork's default branch and are not guaranteed by GitHub.
 
 Each provider button stays unavailable until its ID and secret are set on the **server**, never in Vite or Git. Register the precise callback URL `https://YOUR-HOST/auth/oauth/{provider}/callback` (`google`, `github`, or `microsoft`) in the corresponding provider console. The server uses authorization code, PKCE, a signed short-lived state cookie and a server-side token exchange; provider access tokens are not stored. For localhost, register `http://localhost:8543/auth/oauth/{provider}/callback` and set the local backend's `PUBLIC_BASE_URL=http://localhost:8543` when testing that provider. Provider sign-in is not a substitute for organizational identity verification or officer authorization.
 

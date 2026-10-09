@@ -1,11 +1,11 @@
 # HeatSafe AI on Render: free temporary demonstration
 
-This is a **temporary presentation deployment**, not an operational warning service. The root `render.yaml` defines one free web service (FastAPI plus the built dashboard at the same HTTPS origin) and one free Render Postgres database with PostGIS. It defines **no paid scheduler, cron job, or public dispatch gateway**. While the dashboard is open, the web process requests a bounded forecast refresh using the existing QC pipeline.
+This is a **temporary presentation deployment**, not an operational warning service. The root `render.yaml` defines one free web service (FastAPI plus the built dashboard at the same HTTPS origin) and one free Render Postgres database with PostGIS. It defines **no paid scheduler, cron job, or public dispatch gateway**. The optional [free GitHub Actions preload](PRELOAD_FREE_SCHEDULE.md) fetches forecast data off Render every six hours and uploads it through a dedicated restricted token; with that token configured, visitor-triggered Open-Meteo fetching is disabled.
 
 ## Important limitations
 
 - Render's free Postgres expires **30 days** after creation and has no backups. Do not load private health data or rely on it for long-term records.
-- Free web services can sleep after inactivity; first requests can be slow. The in-process refresh runs only after a signed-in dashboard is opened, not on a wall-clock schedule. A sleeping instance does not refresh data.
+- Free web services can sleep after inactivity; first requests can be slow. Without the optional preload, the in-process refresh runs only after a signed-in dashboard is opened. With preload, GitHub Actions wakes the service but scheduled runs can be delayed or dropped.
 - A first forecast run across all configured districts may take several minutes or fail under free-instance memory, upstream, or database limits. Missing, stale, or QC-failed records remain visibly blocked; historical replay remains a demonstration of the rules, not proof of forecast accuracy.
 - The database is private-only in the Blueprint. The web service uses strict authentication and CAP `Test`. SMS/email are still simulated.
 - The repository must first contain the README, Dockerfile, and Blueprint changes on the branch that Render uses. Creating a Blueprint from the old branch will not deploy these changes.

@@ -1,0 +1,31 @@
+name: Preload seven-day forecast
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 00:23, 06:23, 12:23 and 18:23 UTC; avoids the top-of-hour Actions queue.
+    - cron: "23 */6 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: heatsafe-forecast-preload
+  cancel-in-progress: false
+
+jobs:
+  preload:
+    # The scheduler is for the Render-connected fork, not the upstream repository.
+    if: github.repository == 'GhxstOSINT/heatwave-ews'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      HEATSAFE_BASE_URL: https://heatsafe-ai-demo.onrender.com
+      HEATSAFE_FORECAST_UPLOAD_TOKEN: ${{ secrets.HEATSAFE_FORECAST_UPLOAD_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Fetch externally and publish seven-day forecast
+        run: python scripts/preload_forecast.py

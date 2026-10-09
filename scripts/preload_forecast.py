@@ -69,16 +69,12 @@ def build_bundle() -> bytes:
         return zip_run(Path(temporary) / manifest["run_id"])
 
 
-def seven_day_overview() -> tuple[bool, str]:
-    with urlopen(BASE_URL + "/overview", timeout=120) as response:
-        overview = json.load(response)
+def seven_day_overview(token: str) -> tuple[bool, str]:
+    overview = request_json("GET", "/forecast-upload/verify", token)
     status = overview.get("data_status", {})
-    items = overview.get("items", [])
-    dates = {item.get("date") for item in items}
-    districts = {item.get("district_id") for item in items}
-    if (status.get("state") != "current" or overview.get("emission_blocked")
-            or len(dates) != 7 or len(districts) != 641 or len(items) != 641 * 7
-            or any(item.get("level") is None for item in items)):
+    if (status.get("state") != "current" or overview.get("day_count") != 7
+            or overview.get("district_count") != 641 or overview.get("alert_count") != 641 * 7
+            or overview.get("missing_level_count") != 0):
         return False, str(status.get("state", "unavailable"))
     return True, str(status.get("run_id", "unknown run"))
 
@@ -103,7 +99,7 @@ def main() -> int:
                 print("Forecast quality checks or processing failed; see Render logs.", file=sys.stderr)
                 return 1
             if state.get("state") == "succeeded":
-                complete, detail = seven_day_overview()
+                complete, detail = seven_day_overview(token)
                 if complete:
                     print(f"Fresh seven-day forecast is ready: {detail}", flush=True)
                     return 0

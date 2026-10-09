@@ -10,7 +10,7 @@ The scheduled GitHub Actions runner fetches Open-Meteo's seven-day forecast **ou
 4. In the fork `GhxstOSINT/heatwave-ews`, open **Settings → Secrets and variables → Actions → New repository secret**. Create `HEATSAFE_FORECAST_UPLOAD_TOKEN` with the **same** `$token` value. Keep the value only in the two secret stores. Clear the PowerShell variable after both are saved with `Remove-Variable token`.
 5. Merge the branch into the fork's **default branch** (or make this branch the default). GitHub scheduled workflows run only from the default branch. In the fork's **Actions** tab, enable Actions and the **Preload seven-day forecast** workflow if prompted. Choose **Run workflow** for an immediate test. A successful log ends with `Fresh seven-day forecast is ready` and a run ID.
 
-The GitHub workflow runs at **00:23, 06:23, 12:23 and 18:23 UTC** (05:53, 11:53, 17:53 and 23:53 IST). It also supports manual runs. The run checks that `/overview` has seven dates, 641 districts, and 4,487 alert rows before reporting success.
+The GitHub workflow runs at **00:23, 06:23, 12:23 and 18:23 UTC** (05:53, 11:53, 17:53 and 23:53 IST). It also supports manual runs. Its token-protected verification checks seven dates, 641 districts, and 4,487 alert rows before reporting success.
 
 ## Preload immediately from this computer
 

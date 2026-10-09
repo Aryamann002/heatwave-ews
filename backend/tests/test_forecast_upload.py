@@ -54,6 +54,15 @@ class ForecastUploadTest(unittest.TestCase):
         with patch.dict(os.environ, {"HEATSAFE_FORECAST_UPLOAD_TOKEN": "x" * 40}), TestClient(app) as client:
             self.assertEqual(client.post("/forecast-upload", content=bundle()).status_code, 401)
             self.assertEqual(client.get("/forecast-upload/status").status_code, 401)
+            self.assertEqual(client.get("/forecast-upload/verify").status_code, 401)
+
+    def test_strict_mode_allows_token_route_but_not_other_dashboard_data(self) -> None:
+        with patch.dict(os.environ, {"AUTH_MODE": "strict", "HEATWATCH_USERS_JSON": "{}", "HEATSAFE_FORECAST_UPLOAD_TOKEN": "x" * 40}), \
+             patch("app.main.refresh_status", return_value={"state": "idle"}), \
+             TestClient(app) as client:
+            headers = {"Authorization": "Bearer " + "x" * 40}
+            self.assertEqual(client.get("/forecast-upload/status", headers=headers).status_code, 200)
+            self.assertEqual(client.get("/overview", headers=headers).status_code, 401)
 
     def test_valid_token_starts_only_checked_bundle(self) -> None:
         with patch.dict(os.environ, {"HEATSAFE_FORECAST_UPLOAD_TOKEN": "x" * 40}), \

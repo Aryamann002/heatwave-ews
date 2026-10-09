@@ -140,7 +140,7 @@ def _app_origin(request: Request) -> str:
 async def protect_strict_dashboard_api(request: Request, call_next):
     """Keep read-only map data behind authentication on public strict deployments."""
     path = request.url.path
-    public = path.startswith(("/auth/", "/assets/", "/docs", "/openapi.json")) or path in {"/", "/health", "/landing.html", "/login.html", "/signup.html", "/dashboard.html", "/favicon.ico"}
+    public = path.startswith(("/auth/", "/assets/", "/docs", "/openapi.json", "/forecast-upload")) or path in {"/", "/health", "/landing.html", "/login.html", "/signup.html", "/dashboard.html", "/favicon.ico"}
     if auth_mode() == "strict" and not public and request.method != "OPTIONS":
         header = request.headers.get("authorization", "")
         token = header[7:] if header.lower().startswith("bearer ") else request.cookies.get(SESSION_COOKIE)
@@ -421,6 +421,22 @@ def _require_forecast_upload_token(request: Request) -> None:
 def uploaded_forecast_status(request: Request) -> dict[str, Any]:
     _require_forecast_upload_token(request)
     return refresh_status(_database_url())
+
+
+@app.get("/forecast-upload/verify")
+def verify_uploaded_forecast(request: Request) -> dict[str, Any]:
+    """Return only the counts needed to verify a complete, current run."""
+    _require_forecast_upload_token(request)
+    status = data_status(_database_url())
+    rows = fetch_rows(
+        _database_url(),
+        """SELECT COUNT(*) AS alert_count, COUNT(DISTINCT district_id) AS district_count,
+                  COUNT(DISTINCT forecast_date) AS day_count,
+                  COUNT(*) FILTER (WHERE level IS NULL) AS missing_level_count
+           FROM alerts WHERE run_id = %s""",
+        (status.get("run_id"),),
+    )
+    return {"data_status": status, **rows[0]}
 
 
 @app.post("/forecast-upload")

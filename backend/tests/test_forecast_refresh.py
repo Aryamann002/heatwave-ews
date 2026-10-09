@@ -38,6 +38,10 @@ class ForecastRefreshTest(unittest.TestCase):
             self.assertEqual(start_if_due("db")["state"], "running")
             thread.return_value.start.assert_called_once()
             self.assertIn("next_attempt_at <= now()", cursor.execute.call_args.args[0])
+            self.assertIn("heartbeat_at IS NULL", cursor.execute.call_args.args[0])
+            self.assertIn("run_token = %s", cursor.execute.call_args.args[0])
+            self.assertEqual(thread.call_args.kwargs["args"][0], "db")
+            self.assertEqual(len(thread.call_args.kwargs["args"][1]), 32)
 
     def test_unclaimed_refresh_does_not_start_a_second_worker(self) -> None:
         connection = MagicMock()

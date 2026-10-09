@@ -26,6 +26,8 @@ def ensure_operational_tables(database_url: str) -> None:
             started_at timestamptz,
             finished_at timestamptz,
             next_attempt_at timestamptz NOT NULL DEFAULT '-infinity',
+            heartbeat_at timestamptz,
+            run_token text,
             detail text
         )
         """,
@@ -222,6 +224,8 @@ def ensure_operational_tables(database_url: str) -> None:
         for statement in statements:
             cursor.execute(statement)
         cursor.execute("INSERT INTO forecast_refresh_state (id, state) VALUES (1, 'idle') ON CONFLICT (id) DO NOTHING")
+        cursor.execute("ALTER TABLE forecast_refresh_state ADD COLUMN IF NOT EXISTS heartbeat_at timestamptz")
+        cursor.execute("ALTER TABLE forecast_refresh_state ADD COLUMN IF NOT EXISTS run_token text")
         cursor.execute("ALTER TABLE thermal_indices ALTER COLUMN heat_index_c DROP NOT NULL")
         cursor.execute("ALTER TABLE thermal_indices ADD COLUMN IF NOT EXISTS utci_shade_c double precision")
         cursor.execute("ALTER TABLE thermal_indices ADD COLUMN IF NOT EXISTS utci_sun_c double precision")

@@ -10,8 +10,9 @@ from __future__ import annotations
 import logging
 import os
 from datetime import UTC, datetime
-from threading import Thread
+from threading import Event, Thread
 from typing import Any
+from uuid import uuid4
 
 import psycopg
 
@@ -57,26 +58,54 @@ def start_if_due(database_url: str) -> dict[str, Any]:
     forecast = data_status(database_url)
     if forecast["state"] == "current" and (forecast["age_hours"] or 0) < MIN_REFRESH_AGE_HOURS:
         return refresh_status(database_url)
+    token = uuid4().hex
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
         cursor.execute(
             """
             UPDATE forecast_refresh_state
             SET state = 'running', started_at = now(), finished_at = NULL,
-                next_attempt_at = now() + interval '30 minutes', detail = NULL
-            WHERE id = 1 AND next_attempt_at <= now()
+                next_attempt_at = now() + interval '2 minutes',
+                heartbeat_at = now(), run_token = %s, detail = NULL
+            WHERE id = 1 AND (
+                (state <> 'running' AND next_attempt_at <= now())
+                OR (state = 'running' AND (
+                    heartbeat_at < now() - interval '2 minutes'
+                    OR (heartbeat_at IS NULL AND started_at < now() - interval '2 minutes')
+                ))
+            )
             RETURNING id
-            """
+            """,
+            (token,),
         )
         claimed = cursor.fetchone() is not None
     if claimed:
-        Thread(target=_run, args=(database_url,), name="forecast-refresh", daemon=True).start()
+        Thread(target=_run, args=(database_url, token), name="forecast-refresh", daemon=True).start()
     return refresh_status(database_url)
 
 
-def _run(database_url: str) -> None:
+def _heartbeat(database_url: str, token: str, stop: Event) -> None:
+    while not stop.wait(30):
+        try:
+            with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+                cursor.execute(
+                    """UPDATE forecast_refresh_state SET heartbeat_at = now(),
+                       next_attempt_at = now() + interval '2 minutes'
+                       WHERE id = 1 AND state = 'running' AND run_token = %s""",
+                    (token,),
+                )
+                if cursor.rowcount == 0:
+                    return
+        except Exception:
+            LOG.exception("Could not renew forecast refresh lease")
+
+
+def _run(database_url: str, token: str) -> None:
     """Run the existing QC pipeline; preserve the alert block if it fails."""
     from pipeline.operational import run_operational
 
+    stop = Event()
+    heartbeat = Thread(target=_heartbeat, args=(database_url, token, stop), name="forecast-heartbeat", daemon=True)
+    heartbeat.start()
     try:
         succeeded = run_operational(database_url)
         detail = None if succeeded else "Upstream retrieval or quality checks failed."
@@ -84,6 +113,9 @@ def _run(database_url: str) -> None:
         LOG.exception("Automatic forecast refresh failed")
         succeeded = False
         detail = "The forecast processor failed before completion."
+    finally:
+        stop.set()
+        heartbeat.join(timeout=1)
     try:
         with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
             cursor.execute(
@@ -91,9 +123,9 @@ def _run(database_url: str) -> None:
                 UPDATE forecast_refresh_state
                 SET state = %s, finished_at = %s,
                     next_attempt_at = now() + (%s * interval '1 minute'), detail = %s
-                WHERE id = 1
+                WHERE id = 1 AND run_token = %s
                 """,
-                ("succeeded" if succeeded else "failed", datetime.now(UTC), 360 if succeeded else 20, detail),
+                ("succeeded" if succeeded else "failed", datetime.now(UTC), 360 if succeeded else 20, detail, token),
             )
     except Exception:
         LOG.exception("Could not persist forecast refresh status")

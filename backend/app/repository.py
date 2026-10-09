@@ -101,6 +101,13 @@ def ensure_operational_tables(database_url: str) -> None:
         )
         """,
         """
+        CREATE TABLE IF NOT EXISTS registered_credentials (
+            user_id text PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
+            password_hash text NOT NULL,
+            created_at timestamptz NOT NULL DEFAULT now()
+        )
+        """,
+        """
         CREATE TABLE IF NOT EXISTS oauth_identities (
             provider text NOT NULL CHECK (provider IN ('google', 'github', 'microsoft')),
             provider_subject text NOT NULL,

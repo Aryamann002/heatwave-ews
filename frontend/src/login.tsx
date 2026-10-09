@@ -77,7 +77,7 @@ function Login() {
               </a>;
             })}
           </div>
-          <div className="auth-divider"><span>or use your assigned account</span></div>
+          <div className="auth-divider"><span>or use your email and password</span></div>
           <form className="auth-form" onSubmit={submit}>
             <label htmlFor="auth-username">Email or assigned username</label>
             <input id="auth-username" required autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="you@example.org" />
@@ -86,8 +86,9 @@ function Login() {
             {error && <p className="auth-error" role="alert">{error}</p>}
             <button type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign in to dashboard"}<span aria-hidden="true">→</span></button>
           </form>
+          {config?.email_registration && <p className="auth-switch">New to HeatSafe AI? <a href={`/signup.html?next=${encodeURIComponent(destination)}`}>Create an account</a></p>}
           {config?.mode === "demo" && <p className="auth-demo">Local demo access: <code>officer</code> / <code>officer-demo</code>. This account is for demonstration only.</p>}
-          {config?.mode === "strict" && <p className="auth-help">Need access? Ask your HeatSafe AI administrator to provision your account. New provider sign-ins receive viewer access only.</p>}
+          {config?.mode === "strict" && <p className="auth-help">{config.email_registration ? "New accounts receive viewer access. Officer and admin access is assigned separately." : "Need access? Ask your HeatSafe AI administrator to provision your account."}</p>}
           {!config && !error && <p className="auth-help" role="status">Checking available sign-in methods…</p>}
         </div>
         <p className="auth-legal">HeatSafe AI supports planning and response. For public warnings, follow IMD and local authorities.</p>

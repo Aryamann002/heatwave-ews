@@ -21,6 +21,7 @@ export default defineConfig({
     index: resolve(import.meta.dirname, "index.html"),
     landing: resolve(import.meta.dirname, "landing.html"),
     login: resolve(import.meta.dirname, "login.html"),
+    signup: resolve(import.meta.dirname, "signup.html"),
     dashboard: resolve(import.meta.dirname, "dashboard.html"),
   } } },
   server: { host: "0.0.0.0", port: 5173 },

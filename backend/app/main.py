@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import uuid
 from hashlib import sha256
 from contextlib import asynccontextmanager
@@ -20,7 +21,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 
 from app.advisories import IST, AdvisoryDraft, draft_advisory, lint_advisory
-from app.auth import SessionIdentity, auth_mode, issue_session, public_auth_config, read_session, verify_password
+from app.auth import SessionIdentity, auth_mode, hash_registered_password, issue_session, public_auth_config, read_session, registration_enabled, verify_password, verify_registered_password
 from app.districts import seed_districts
 from app.nl_query import QueryResult, process_nl_query
 from app.oauth import OAUTH_COOKIE, SESSION_COOKIE, authorization_url, client_credentials, configured_providers, exchange_identity, make_pending, public_base_url, read_pending, safe_next
@@ -45,6 +46,11 @@ class EmailDispatchRequest(BaseModel):
 class LoginRequest(BaseModel):
     username: str = Field(min_length=2, max_length=80)
     password: str = Field(min_length=4, max_length=200)
+
+
+class RegisterRequest(BaseModel):
+    email: str = Field(min_length=6, max_length=80)
+    password: str = Field(min_length=12, max_length=200)
 
 
 class MunicipalTriggerRequest(BaseModel):
@@ -130,7 +136,7 @@ def _app_origin(request: Request) -> str:
 async def protect_strict_dashboard_api(request: Request, call_next):
     """Keep read-only map data behind authentication on public strict deployments."""
     path = request.url.path
-    public = path.startswith(("/auth/", "/assets/", "/docs", "/openapi.json")) or path in {"/", "/health", "/landing.html", "/login.html", "/dashboard.html", "/favicon.ico"}
+    public = path.startswith(("/auth/", "/assets/", "/docs", "/openapi.json")) or path in {"/", "/health", "/landing.html", "/login.html", "/signup.html", "/dashboard.html", "/favicon.ico"}
     if auth_mode() == "strict" and not public and request.method != "OPTIONS":
         header = request.headers.get("authorization", "")
         token = header[7:] if header.lower().startswith("bearer ") else request.cookies.get(SESSION_COOKIE)
@@ -173,7 +179,7 @@ def health() -> dict[str, str]:
 def get_auth_config() -> dict[str, Any]:
     """Return public authentication mode and deployment guidance."""
     try:
-        return {**public_auth_config(), "providers": configured_providers(), "email_registration": False}
+        return {**public_auth_config(), "providers": configured_providers(), "email_registration": registration_enabled()}
     except RuntimeError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
 
@@ -185,19 +191,48 @@ def login(request: LoginRequest, response: Response, http_request: Request) -> d
         valid = verify_password(request.username, request.password)
     except (RuntimeError, json.JSONDecodeError) as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
+    username = request.username.strip()
+    if not valid and "@" in username:
+        username = username.lower()
+        registered = fetch_rows(
+            _database_url(),
+            "SELECT u.user_id, u.username, u.role, c.password_hash FROM users u JOIN registered_credentials c ON c.user_id = u.user_id WHERE u.username = %s",
+            (username,),
+        )
+        valid = bool(registered) and verify_registered_password(request.password, registered[0]["password_hash"])
     if not valid:
         raise HTTPException(status_code=401, detail="Invalid username or password")
-    rows = fetch_rows(
-        _database_url(),
-        "SELECT user_id, username, role FROM users WHERE username = %s",
-        (request.username,),
-    )
+    rows = fetch_rows(_database_url(), "SELECT user_id, username, role FROM users WHERE username = %s", (username,))
     if not rows:
         raise HTTPException(status_code=403, detail="Authenticated account is not provisioned in this deployment")
     identity = SessionIdentity(**rows[0])
     token = issue_session(identity)
     response.set_cookie(SESSION_COOKIE, token, max_age=8 * 60 * 60, httponly=True, secure=_cookie_secure(http_request), samesite="lax", path="/")
     return {"token": token, "expires_in_seconds": 8 * 60 * 60, "user": rows[0]}
+
+
+@app.post("/auth/register", status_code=201)
+def register(request: RegisterRequest, response: Response, http_request: Request) -> dict[str, Any]:
+    """Create a new viewer account using a unique email and salted password hash."""
+    if not registration_enabled():
+        raise HTTPException(status_code=403, detail="Email registration is not enabled on this deployment")
+    email = request.email.strip().lower()
+    if not re.fullmatch(r"[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+", email):
+        raise HTTPException(status_code=422, detail="Enter a valid email address")
+    user_id = f"registered-{uuid.uuid4()}"
+    password_hash = hash_registered_password(request.password)
+    try:
+        with psycopg.connect(_database_url()) as connection, connection.cursor() as cursor:
+            cursor.execute("INSERT INTO users (user_id, username, role) VALUES (%s, %s, 'viewer') ON CONFLICT (username) DO NOTHING RETURNING user_id", (user_id, email))
+            if cursor.fetchone() is None:
+                raise HTTPException(status_code=409, detail="An account with this email already exists. Sign in instead.")
+            cursor.execute("INSERT INTO registered_credentials (user_id, password_hash) VALUES (%s, %s)", (user_id, password_hash))
+    except psycopg.Error as error:
+        raise HTTPException(status_code=503, detail="Registration is temporarily unavailable. Please try again.") from error
+    identity = SessionIdentity(user_id, email, "viewer")
+    token = issue_session(identity)
+    response.set_cookie(SESSION_COOKIE, token, max_age=8 * 60 * 60, httponly=True, secure=_cookie_secure(http_request), samesite="lax", path="/")
+    return {"token": token, "expires_in_seconds": 8 * 60 * 60, "user": {"user_id": user_id, "username": email, "role": "viewer"}}
 
 
 @app.post("/auth/logout")

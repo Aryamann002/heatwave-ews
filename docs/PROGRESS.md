@@ -168,3 +168,9 @@
 
 - Removed hackathon/prototype and non-official-warning labels from the loading screen, landing page, login page, and dashboard copy. The public UI now uses HeatSafe AI and thermal-stress terminology without suggesting institutional endorsement.
 - Preserved technical readiness metadata, source attribution, and repository safety/limitations documentation; those remain necessary for an auditable heat-risk system.
+
+## 2026-10-09 — viewer account registration
+
+- Added a HeatSafe AI sign-up page linked from sign-in, plus `POST /auth/register`. Registration is explicitly enabled for strict-mode deployments with `HEATSAFE_ALLOW_SIGNUP=true` (set by the Render Blueprint). New accounts are always viewers and use salted scrypt password hashes in Postgres; successful registration starts a normal eight-hour session.
+- Registration email ownership is not verified, and password reset/account recovery, account lockout, and institutional identity checks remain unavailable. Do not treat self-registered accounts as trusted officers.
+- Verified the frontend production build, authentication unit tests, and a database-backed registration/login test against local Postgres. The local UI was opened at desktop width; this Compose instance remains in demo mode, where sign-up is intentionally disabled. Render deployment still needs end-to-end verification.

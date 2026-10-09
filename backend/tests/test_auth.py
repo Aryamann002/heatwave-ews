@@ -3,7 +3,7 @@
 import os
 import unittest
 
-from app.auth import SessionIdentity, issue_session, read_session, verify_password
+from app.auth import SessionIdentity, hash_registered_password, issue_session, read_session, registration_enabled, verify_password, verify_registered_password
 
 
 class AuthTest(unittest.TestCase):
@@ -22,3 +22,27 @@ class AuthTest(unittest.TestCase):
             read_session(token + "x", now=1_001)
         with self.assertRaises(ValueError):
             read_session(token, now=1_000 + 8 * 60 * 60)
+
+    def test_registered_password_is_salted_and_verified(self) -> None:
+        first = hash_registered_password("a long unique password")
+        second = hash_registered_password("a long unique password")
+        self.assertNotEqual(first, second)
+        self.assertNotIn("a long unique password", first)
+        self.assertTrue(verify_registered_password("a long unique password", first))
+        self.assertFalse(verify_registered_password("wrong password", first))
+        self.assertFalse(verify_registered_password("anything", "invalid"))
+
+    def test_public_registration_requires_strict_opt_in(self) -> None:
+        previous = os.environ.get("HEATSAFE_ALLOW_SIGNUP")
+        try:
+            os.environ["HEATSAFE_ALLOW_SIGNUP"] = "true"
+            self.assertFalse(registration_enabled())
+            os.environ["AUTH_MODE"] = "strict"
+            self.assertTrue(registration_enabled())
+            os.environ["HEATSAFE_ALLOW_SIGNUP"] = "false"
+            self.assertFalse(registration_enabled())
+        finally:
+            if previous is None:
+                os.environ.pop("HEATSAFE_ALLOW_SIGNUP", None)
+            else:
+                os.environ["HEATSAFE_ALLOW_SIGNUP"] = previous

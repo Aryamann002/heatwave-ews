@@ -8,6 +8,7 @@ Deployments set ``AUTH_MODE=strict``, ``HEATWATCH_SESSION_SECRET`` and
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import hmac
 import json
@@ -70,6 +71,29 @@ def verify_password(username: str, password: str) -> bool:
     """Constant-time comparison against credentials supplied by the environment."""
     expected = _credentials().get(username)
     return expected is not None and hmac.compare_digest(expected.encode(), password.encode())
+
+
+def registration_enabled() -> bool:
+    """Require an explicit opt-in for public, viewer-only registration."""
+    return auth_mode() == "strict" and os.environ.get("HEATSAFE_ALLOW_SIGNUP", "").strip().lower() == "true"
+
+
+def hash_registered_password(password: str) -> str:
+    """Store a salted, memory-hard verifier, never the submitted password."""
+    salt = secrets.token_bytes(16)
+    digest = hashlib.scrypt(password.encode(), salt=salt, n=2**14, r=8, p=1)
+    return f"scrypt$16384$8$1${_b64encode(salt)}${_b64encode(digest)}"
+
+
+def verify_registered_password(password: str, encoded: str) -> bool:
+    try:
+        algorithm, n, r, p, salt, expected = encoded.split("$")
+        if (algorithm, n, r, p) != ("scrypt", "16384", "8", "1"):
+            return False
+        actual = hashlib.scrypt(password.encode(), salt=_b64decode(salt), n=2**14, r=8, p=1)
+        return hmac.compare_digest(actual, _b64decode(expected))
+    except (ValueError, TypeError, binascii.Error):
+        return False
 
 
 def _secret() -> bytes:

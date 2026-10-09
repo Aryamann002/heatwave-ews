@@ -16,6 +16,8 @@ services:
           property: connectionString
       - key: AUTH_MODE
         value: strict
+      - key: HEATSAFE_ALLOW_SIGNUP
+        value: "true"
       - key: HEATWATCH_SESSION_SECRET
         generateValue: true
       - key: HEATWATCH_USERS_JSON

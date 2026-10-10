@@ -140,7 +140,7 @@ def _app_origin(request: Request) -> str:
 async def protect_strict_dashboard_api(request: Request, call_next):
     """Keep read-only map data behind authentication on public strict deployments."""
     path = request.url.path
-    public = path.startswith(("/auth/", "/assets/", "/docs", "/openapi.json", "/forecast-upload")) or path in {"/", "/health", "/landing.html", "/login.html", "/signup.html", "/dashboard.html", "/favicon.ico"}
+    public = path.startswith(("/auth/", "/assets/", "/docs", "/openapi.json", "/forecast-upload")) or path in {"/", "/health", "/landing.html", "/login.html", "/signup.html", "/dashboard.html", "/theme.css", "/theme.js", "/favicon.ico"}
     if auth_mode() == "strict" and not public and request.method != "OPTIONS":
         header = request.headers.get("authorization", "")
         token = header[7:] if header.lower().startswith("bearer ") else request.cookies.get(SESSION_COOKIE)

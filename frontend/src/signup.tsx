@@ -27,7 +27,7 @@ function Signup() {
     setBusy(true);
     setError("");
     send<LoginResponse>("POST", "/auth/register", { email: email.trim(), password })
-      .then(() => window.location.assign(destination))
+      .then(() => { if (window.HeatSafeUI) window.HeatSafeUI.navigate(destination); else window.location.assign(destination); })
       .catch((reason: Error) => setError(reason.message === "Failed to fetch" ? "The account service is unavailable. Please try again shortly." : reason.message))
       .finally(() => setBusy(false));
   };
@@ -51,7 +51,7 @@ function Signup() {
         <p className="auth-story-foot">HeatSafe AI · Human thermal stress</p>
       </section>
       <main className="auth-form-side" id="create-account">
-        <div className="auth-topline"><span>Secure access</span><a href="/landing.html">Back to overview <span aria-hidden="true">↗</span></a></div>
+        <div className="auth-topline"><span>Secure access</span><div className="auth-actions"><span id="heatsafe-theme-slot" /><a href="/landing.html">Back to overview <span aria-hidden="true">↗</span></a></div></div>
         <div className="auth-form-wrap">
           <h2>Create your account.</h2>
           <p className="auth-intro">Set up read-only access to the HeatSafe AI dashboard.</p>

@@ -8,7 +8,8 @@ export function AuthPanel({ user }: { user: User }) {
     try {
       await send<{ signed_out: boolean }>("POST", "/auth/logout");
       setSessionToken(null);
-      window.location.assign("/login.html");
+      if (window.HeatSafeUI) window.HeatSafeUI.navigate("/login.html");
+      else window.location.assign("/login.html");
     } catch {
       setError("Could not sign out. Please try again.");
     }

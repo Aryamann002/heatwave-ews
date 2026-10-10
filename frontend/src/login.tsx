@@ -37,7 +37,7 @@ function Login() {
     setBusy(true);
     setError("");
     send<LoginResponse>("POST", "/auth/login", { username: username.trim(), password })
-      .then(() => window.location.assign(destination))
+      .then(() => { if (window.HeatSafeUI) window.HeatSafeUI.navigate(destination); else window.location.assign(destination); })
       .catch((reason: Error) => setError(reason.message === "Failed to fetch" ? "The sign-in service is unavailable. Please wait a moment and try again." : reason.message))
       .finally(() => setBusy(false));
   };
@@ -62,7 +62,7 @@ function Login() {
       </section>
 
       <main className="auth-form-side" id="sign-in">
-        <div className="auth-topline"><span>Secure access</span><a href="/landing.html">Back to overview <span aria-hidden="true">↗</span></a></div>
+        <div className="auth-topline"><span>Secure access</span><div className="auth-actions"><span id="heatsafe-theme-slot" /><a href="/landing.html">Back to overview <span aria-hidden="true">↗</span></a></div></div>
         <div className="auth-form-wrap">
           <h2>Welcome back.</h2>
           <p className="auth-intro">Sign in to open the HeatSafe AI dashboard.</p>

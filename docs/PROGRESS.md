@@ -186,3 +186,10 @@
 - Fixed the MapLibre CSS collision that collapsed the map canvas; the district map now fills its container and resizes with the layout.
 - Added an opt-in, database-gated forecast refresh initiated by an authenticated dashboard visit. The existing Open-Meteo/QC/alert pipeline runs in the web process without a paid cron service, with 20-minute failure retry and six-hour success cooldown. Missing, stale, and failed data remain blocked until a complete valid run is stored.
 - The dashboard now reports refresh progress. This free-tier behavior is demand-driven, not a guarantee of continuous updates while Render sleeps.
+
+## 2026-10-10 — shared page transitions and dark mode
+
+- Added a persistent light/dark theme control to the landing, sign-in, sign-up, and dashboard pages. The first visit follows the device preference; a manual choice is saved locally and shared across tabs.
+- Added brief enter/exit transitions for internal page navigation and interaction feedback, while respecting reduced-motion settings. Alert-category colors remain semantic data colors.
+- Allowed the two shared theme assets through strict authentication so the public pages can load them before sign-in.
+- Verified the frontend production build and 115 backend tests. The deployed browser appearance and interaction flow require a final live check after Render deploys this commit.

@@ -124,6 +124,7 @@ function App({ user }: { user: User }) {
       <header className="topbar">
         <a className="brand" href="/landing.html"><h1>HeatSafe AI</h1><p>Impact-led heat action support</p></a>
         <QueryBox />
+        <span id="heatsafe-theme-slot" />
         <AuthPanel user={user} />
       </header>
       {readiness?.auth.mode === "demo" && <div className="auth-banner" role="status">{readiness.auth.banner} Operational actions still require a signed session.</div>}

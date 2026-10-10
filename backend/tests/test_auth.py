@@ -2,8 +2,12 @@
 
 import os
 import unittest
+from unittest.mock import patch
+
+from fastapi.testclient import TestClient
 
 from app.auth import SessionIdentity, hash_registered_password, issue_session, read_session, registration_enabled, verify_password, verify_registered_password
+from app.main import app
 
 
 class AuthTest(unittest.TestCase):
@@ -46,3 +50,9 @@ class AuthTest(unittest.TestCase):
                 os.environ.pop("HEATSAFE_ALLOW_SIGNUP", None)
             else:
                 os.environ["HEATSAFE_ALLOW_SIGNUP"] = previous
+
+    def test_theme_assets_are_public_in_strict_mode(self) -> None:
+        with patch.dict(os.environ, {"AUTH_MODE": "strict"}):
+            client = TestClient(app)
+            for path in ("/theme.js", "/theme.css"):
+                self.assertNotEqual(client.get(path).status_code, 401)

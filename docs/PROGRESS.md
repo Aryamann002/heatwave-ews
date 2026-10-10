@@ -192,4 +192,4 @@
 - Added a persistent light/dark theme control to the landing, sign-in, sign-up, and dashboard pages. The first visit follows the device preference; a manual choice is saved locally and shared across tabs.
 - Added brief enter/exit transitions for internal page navigation and interaction feedback, while respecting reduced-motion settings. Alert-category colors remain semantic data colors.
 - Allowed the two shared theme assets through strict authentication so the public pages can load them before sign-in.
-- Verified the frontend production build and 115 backend tests. The deployed browser appearance and interaction flow require a final live check after Render deploys this commit.
+- Verified the frontend production build and 115 backend tests. On the live Render deployment, checked landing/sign-in/sign-up navigation and light/dark persistence in the browser.

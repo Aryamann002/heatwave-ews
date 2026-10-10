@@ -84,6 +84,11 @@ html[data-theme="dark"] .blocked-card p { color: #f0c1b7; }
 html[data-theme="dark"] .chart svg { fill: #b7cbbc; }
 html[data-theme="dark"] .chart .grid { stroke: #486051; }
 html[data-theme="dark"] .chart .selected-day { fill: #a1dfb5; opacity: .12; }
+html[data-theme="dark"] .chart figcaption, html[data-theme="dark"] .card header small, html[data-theme="dark"] .district-tabs button small { color: #b8cbbc; }
+html[data-theme="dark"] .ranking-tools button { color: #d3e2d5; border-color: #506655; }
+html[data-theme="dark"] .ranking-tools button:hover { background: #2c4937; }
+html[data-theme="dark"] .tracks em, html[data-theme="dark"] .tracks em.ahead { color: #f1b376; }
+html[data-theme="dark"] .model-card { border-color: #40584a; }
 html[data-theme="dark"] th, html[data-theme="dark"] td, html[data-theme="dark"] .vulnerability li, html[data-theme="dark"] .readiness-panel li { border-color: #40584a; }
 
 @media (max-width: 640px) { .heatsafe-theme-toggle { min-width: 36px; padding: 7px; } .heatsafe-theme-toggle span { display: none; } }

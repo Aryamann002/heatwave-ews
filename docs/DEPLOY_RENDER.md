@@ -29,15 +29,14 @@ This is a **temporary presentation deployment**, not an operational warning serv
 
 If the container fails during startup, inspect Render logs for database provisioning/PostGIS errors or memory exhaustion. Do not switch to demo authentication or disable quality gates to make the deploy appear healthy.
 
-## Optional Google, GitHub and Microsoft sign-in
+## Optional Google and GitHub sign-in
 
 Social buttons are intentionally disabled until a provider is configured. After Render assigns the final HTTPS URL, set `PUBLIC_BASE_URL` to that exact origin (for example `https://heatsafe-ai-demo.onrender.com` if that is the assigned URL). Register these callback URLs with the corresponding provider, then add the matching client ID and client secret as **private Render environment variables**:
 
 - Google: `/auth/oauth/google/callback`, `HEATSAFE_GOOGLE_CLIENT_ID` and `HEATSAFE_GOOGLE_CLIENT_SECRET`.
 - GitHub: `/auth/oauth/github/callback`, `HEATSAFE_GITHUB_CLIENT_ID` and `HEATSAFE_GITHUB_CLIENT_SECRET`.
-- Microsoft: `/auth/oauth/microsoft/callback`, `HEATSAFE_MICROSOFT_CLIENT_ID` and `HEATSAFE_MICROSOFT_CLIENT_SECRET`. Register a web app that accepts the account types you intend to permit.
 
-Do not put these secrets in Git, `.env.example`, browser-side variables, or chat. New provider identities receive viewer access only; matching email text never grants officer/admin rights. The provider setup and end-to-end sign-in have not been verified with live credentials yet. Existing privileged email/password access is provisioned with private `HEATWATCH_USERS_JSON` entries. The Blueprint sets `HEATSAFE_ALLOW_SIGNUP=true`: the sign-in page links to `/signup.html`, which creates only viewer accounts in Postgres. Registration emails are **not verified**; there is no password-reset or account-recovery service. Do not use a password you need to recover on this temporary database.
+Do not put these secrets in Git, `.env.example`, browser-side variables, or chat. New provider identities receive viewer access only; matching email text never grants officer/admin rights. The live GitHub provider is configured, but end-to-end user consent still needs verification. Google needs a personal-account OAuth project and credentials before activation. Existing privileged email/password access is provisioned with private `HEATWATCH_USERS_JSON` entries. The Blueprint sets `HEATSAFE_ALLOW_SIGNUP=true`: the sign-in page links to `/signup.html`, which creates only viewer accounts in Postgres. Registration emails are **not verified**; there is no password-reset or account-recovery service. Do not use a password you need to recover on this temporary database.
 
 ## What a persistent live deployment would require
 

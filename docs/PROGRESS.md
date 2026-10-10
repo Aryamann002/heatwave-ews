@@ -1,5 +1,11 @@
 # PROGRESS.md
 
+## 2026-10-10 — Google and GitHub sign-in only
+
+- Removed the unused third provider from the backend allowlist, login UI, configuration examples, and new database constraints. Existing provider identities are preserved; the API will no longer start or complete sign-in for that provider.
+- GitHub OAuth credentials were configured privately in Render and the live `/auth/config` and authorization redirect were checked. Full user-consent login still needs a browser test.
+- Google OAuth remains pending a personal Google Cloud project, consent-screen configuration, and private Render credentials. No Google client secret is stored in the repository.
+
 ## Current status
 
 - **Completed:** 0.1 — repository skeleton, Makefile, Docker Compose stack, FastAPI health endpoint, and minimal React/Vite frontend.
@@ -143,7 +149,7 @@
 ## 2026-10-08 — dedicated landing, sign-in and map flow
 
 - `/` now opens the landing page, which leads to `/login.html`; `/dashboard.html` waits for a valid signed session before loading map data. In strict mode, dashboard API data requires a valid session even when called directly.
-- Added server-side OAuth authorization-code/PKCE flows for Google, GitHub and Microsoft. The login page only enables providers with configured server-side credentials. New provider identities are viewer-only; no email-based privilege linking occurs.
+- Added server-side OAuth authorization-code/PKCE flows for Google and GitHub. The login page only enables providers with configured server-side credentials. New provider identities are viewer-only; no email-based privilege linking occurs.
 - Existing strict-mode credentials can use email-address usernames, seeded as viewer accounts. Public self-registration, password reset, MFA and live provider credentials remain out of scope and are documented as deployment gates.
 - The production frontend now uses the same-origin API; local Vite development targets Compose's port 8543. Frontend type/build and backend syntax checks passed. Full integration tests and the local Docker smoke run require Docker Desktop's Linux engine, which was unavailable during this update.
 

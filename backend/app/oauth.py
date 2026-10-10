@@ -34,7 +34,6 @@ class Provider:
 PROVIDERS = {
     "google": Provider("google", "https://accounts.google.com/o/oauth2/v2/auth", "https://oauth2.googleapis.com/token", "https://openidconnect.googleapis.com/v1/userinfo", "openid email profile"),
     "github": Provider("github", "https://github.com/login/oauth/authorize", "https://github.com/login/oauth/access_token", "https://api.github.com/user", "read:user"),
-    "microsoft": Provider("microsoft", "https://login.microsoftonline.com/common/oauth2/v2.0/authorize", "https://login.microsoftonline.com/common/oauth2/v2.0/token", "https://graph.microsoft.com/oidc/userinfo", "openid profile email"),
 }
 
 
@@ -136,10 +135,8 @@ def exchange_identity(provider: str, code: str, verifier: str, redirect_uri: str
     subject = profile.get("id") if provider == "github" else profile.get("sub")
     if subject is None or not str(subject):
         raise ValueError("Provider did not return a stable user ID")
-    if provider == "google" and profile.get("email_verified") is True:
-        label = profile.get("email") or profile.get("name") or "Google viewer"
-    elif provider == "github":
-        label = profile.get("login") or "GitHub viewer"
+    if provider == "google":
+        label = (profile.get("email") if profile.get("email_verified") is True else None) or profile.get("name") or "Google viewer"
     else:
-        label = profile.get("name") or profile.get("email") or "Microsoft viewer"
+        label = profile.get("login") or "GitHub viewer"
     return str(subject), str(label)[:80]

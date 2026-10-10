@@ -4,11 +4,10 @@ import { API, AuthConfig, LoginResponse, User, getJson, send, setSessionToken } 
 import "./styles.css";
 import "./login.css";
 
-type Provider = "google" | "github" | "microsoft";
+type Provider = "google" | "github";
 const providers: { id: Provider; label: string; mark: string }[] = [
   { id: "google", label: "Google", mark: "G" },
   { id: "github", label: "GitHub", mark: "GH" },
-  { id: "microsoft", label: "Microsoft", mark: "M" },
 ];
 
 function safeDestination() {

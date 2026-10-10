@@ -28,8 +28,15 @@ class OAuthContractTest(unittest.TestCase):
                 read_pending(bad_cookie, bad_provider, bad_state)
 
     def test_only_configured_providers_are_enabled(self) -> None:
-        with patch.dict(os.environ, {"HEATSAFE_GITHUB_CLIENT_ID": "", "HEATSAFE_GITHUB_CLIENT_SECRET": "", "HEATSAFE_MICROSOFT_CLIENT_ID": "", "HEATSAFE_MICROSOFT_CLIENT_SECRET": ""}):
+        with patch.dict(os.environ, {"HEATSAFE_GITHUB_CLIENT_ID": "", "HEATSAFE_GITHUB_CLIENT_SECRET": ""}):
             self.assertEqual(configured_providers(), ["google"])
+
+    def test_microsoft_is_not_a_supported_provider(self) -> None:
+        with patch.dict(os.environ, {"HEATSAFE_MICROSOFT_CLIENT_ID": "ignored", "HEATSAFE_MICROSOFT_CLIENT_SECRET": "ignored"}):
+            self.assertNotIn("microsoft", configured_providers())
+            with self.assertRaises(ValueError):
+                make_pending("microsoft", "/dashboard.html")
+            self.assertEqual(TestClient(app).get("/auth/oauth/microsoft/start").status_code, 404)
 
     def test_authorization_url_has_exact_callback_and_pkce(self) -> None:
         url = authorization_url("google", "http://localhost:8543/auth/oauth/google/callback", "state-1", "challenge-1")

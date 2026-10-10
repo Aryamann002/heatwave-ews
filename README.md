@@ -119,7 +119,6 @@ Copy [.env.example](.env.example) to an untracked `.env`. Do not commit secrets.
 | `PUBLIC_BASE_URL` | Exact HTTPS origin of the deployed backend; required before enabling any OAuth provider |
 | `HEATSAFE_GOOGLE_CLIENT_ID`, `HEATSAFE_GOOGLE_CLIENT_SECRET` | Optional Google web OAuth application credentials |
 | `HEATSAFE_GITHUB_CLIENT_ID`, `HEATSAFE_GITHUB_CLIENT_SECRET` | Optional GitHub OAuth application credentials |
-| `HEATSAFE_MICROSOFT_CLIENT_ID`, `HEATSAFE_MICROSOFT_CLIENT_SECRET` | Optional Microsoft identity-platform app credentials |
 | `CAP_STATUS` | Keep `Test` until authorized profile and gateway approval |
 | `GROQ_API_KEY` | Optional translation/query assistance; templates and keyword parsing work without it |
 | `ALLOW_UNPINNED_POPULATION` | Leave `0` unless deliberately accepting a different raster checksum |
@@ -127,7 +126,7 @@ Copy [.env.example](.env.example) to an untracked `.env`. Do not commit secrets.
 
 The current Docker Compose file is a **local development/demo** topology. It should not be published unchanged. Render deployment preparation and its remaining manual connection/secrets steps are documented in [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md). The free off-Render six-hour forecast preload is documented in [docs/PRELOAD_FREE_SCHEDULE.md](docs/PRELOAD_FREE_SCHEDULE.md); scheduled runs require the workflow on the fork's default branch and are not guaranteed by GitHub.
 
-Each provider button stays unavailable until its ID and secret are set on the **server**, never in Vite or Git. Register the precise callback URL `https://YOUR-HOST/auth/oauth/{provider}/callback` (`google`, `github`, or `microsoft`) in the corresponding provider console. The server uses authorization code, PKCE, a signed short-lived state cookie and a server-side token exchange; provider access tokens are not stored. For localhost, register `http://localhost:8543/auth/oauth/{provider}/callback` and set the local backend's `PUBLIC_BASE_URL=http://localhost:8543` when testing that provider. Provider sign-in is not a substitute for organizational identity verification or officer authorization.
+Each provider button stays unavailable until its ID and secret are set on the **server**, never in Vite or Git. Register the precise callback URL `https://YOUR-HOST/auth/oauth/{provider}/callback` (`google` or `github`) in the corresponding provider console. The server uses authorization code, PKCE, a signed short-lived state cookie and a server-side token exchange; provider access tokens are not stored. For localhost, register `http://localhost:8543/auth/oauth/{provider}/callback` and set the local backend's `PUBLIC_BASE_URL=http://localhost:8543` when testing that provider. Provider sign-in is not a substitute for organizational identity verification or officer authorization.
 
 ## Documentation and attribution
 

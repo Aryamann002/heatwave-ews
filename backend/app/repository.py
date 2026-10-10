@@ -121,7 +121,7 @@ def ensure_operational_tables(database_url: str) -> None:
         """,
         """
         CREATE TABLE IF NOT EXISTS oauth_identities (
-            provider text NOT NULL CHECK (provider IN ('google', 'github', 'microsoft')),
+            provider text NOT NULL CHECK (provider IN ('google', 'github')),
             provider_subject text NOT NULL,
             user_id text NOT NULL REFERENCES users(user_id),
             display_label text NOT NULL,
@@ -223,6 +223,9 @@ def ensure_operational_tables(database_url: str) -> None:
     with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
         for statement in statements:
             cursor.execute(statement)
+        # Retire the former third-party provider without deleting historical user data.
+        cursor.execute("ALTER TABLE oauth_identities DROP CONSTRAINT IF EXISTS oauth_identities_provider_check")
+        cursor.execute("ALTER TABLE oauth_identities ADD CONSTRAINT oauth_identities_provider_check CHECK (provider IN ('google', 'github')) NOT VALID")
         cursor.execute("INSERT INTO forecast_refresh_state (id, state) VALUES (1, 'idle') ON CONFLICT (id) DO NOTHING")
         cursor.execute("ALTER TABLE forecast_refresh_state ADD COLUMN IF NOT EXISTS heartbeat_at timestamptz")
         cursor.execute("ALTER TABLE forecast_refresh_state ADD COLUMN IF NOT EXISTS run_token text")
